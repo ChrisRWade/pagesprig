@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+dist-electron/
+
+# Test / coverage
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment and local machine state
+.env
+.env.*
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# Packaging leftovers
+*.exe
+*.blockmap
+*.nsis.7z
+win-unpacked/
+
+# Local schoolwork / personal data (never commit)
+storage/
+schoolwork/
+tmp/
+.studypdf-index.json
+annotations.study.json
+
+# Python/tool caches if used for sample generation
+__pycache__/
+.venv/
