@@ -1,0 +1,55 @@
+.wrap {
+  padding: 10vh 48px;
+}
+
+.kicker {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.wrap h1 {
+  font-size: 48px;
+  margin: 8px 0 28px;
+}
+
+.grid {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.card {
+  min-width: 180px;
+  min-height: 160px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 22px;
+  font-family: var(--font-display);
+  box-shadow: var(--shadow-paper);
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.avatar {
+  font-size: 36px;
+}
+
+.settings {
+  margin-top: 32px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  min-height: 44px;
+}

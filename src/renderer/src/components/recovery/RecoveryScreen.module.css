@@ -1,0 +1,33 @@
+.wrap {
+  max-width: 720px;
+  margin: 10vh auto;
+  padding: 0 32px;
+}
+
+.wrap h1 {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.item p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}

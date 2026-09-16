@@ -1,0 +1,58 @@
+.wrap {
+  padding: 32px 48px 80px;
+  max-width: 760px;
+  overflow: auto;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.wrap h2 {
+  font-size: 22px;
+  margin: 28px 0 8px;
+}
+
+.help,
+.path {
+  color: var(--graphite);
+}
+
+.path {
+  font-family: ui-monospace, monospace;
+  background: var(--paper);
+  padding: 10px;
+  margin: 8px 0 12px;
+}
+
+.wrap label {
+  display: block;
+  margin: 8px 0;
+}
+
+.wrap input[type='text'],
+.wrap input:not([type]),
+.student input {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 4px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  padding: 0 10px;
+}
+
+.student {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

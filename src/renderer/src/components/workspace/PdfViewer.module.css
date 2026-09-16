@@ -1,0 +1,11 @@
+.scroller {
+  height: 100%;
+  overflow: auto;
+  padding: 28px 24px 80px;
+}
+
+.placeholder {
+  margin: 0 auto 28px;
+  background: color-mix(in srgb, var(--paper) 80%, var(--desk));
+  box-shadow: var(--shadow-paper);
+}

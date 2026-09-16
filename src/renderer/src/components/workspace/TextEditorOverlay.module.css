@@ -1,0 +1,13 @@
+.editor {
+  position: absolute;
+  z-index: 5;
+  min-height: 28px;
+  margin: 0;
+  border: 1px solid #1f4e79;
+  background: rgba(255, 254, 248, 0.94);
+  padding: 2px 4px;
+  resize: both;
+  line-height: 1.25;
+  color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.16);
+}

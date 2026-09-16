@@ -1,0 +1,50 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-top: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--tray) 70%, var(--paper));
+  font-size: 14px;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page,
+.zoom,
+.saved,
+.bad {
+  font-variant-numeric: tabular-nums;
+  color: var(--graphite);
+}
+
+.bad {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.saved {
+  color: var(--saved);
+}
+
+.jump {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.jump input,
+.bar select {
+  height: 36px;
+  min-width: 64px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  padding: 0 8px;
+}

@@ -1,0 +1,56 @@
+.button {
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.primary:hover {
+  background: #2b2621;
+}
+
+.ghost {
+  background: transparent;
+  border-color: var(--hairline);
+}
+
+.ghost:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+
+.tool {
+  width: 52px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--graphite);
+}
+
+.tool:hover,
+.active {
+  background: var(--paper);
+  color: var(--ink);
+}

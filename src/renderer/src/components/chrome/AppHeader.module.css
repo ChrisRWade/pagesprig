@@ -1,0 +1,55 @@
+.header {
+  height: var(--header-h);
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.student select {
+  height: 40px;
+  border: 1px solid var(--hairline);
+  background: var(--tray);
+  padding: 0 10px;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  gap: 4px;
+  overflow: auto;
+}
+
+.tab,
+.tabOn {
+  height: 40px;
+  border: 1px solid var(--hairline);
+  border-bottom: none;
+  background: var(--tray);
+  padding: 0 16px;
+  border-radius: 8px 8px 0 0;
+}
+
+.tabOn {
+  background: var(--desk);
+  font-weight: 700;
+}
+
+.status {
+  color: var(--saved);
+  font-size: 14px;
+  min-width: 72px;
+}

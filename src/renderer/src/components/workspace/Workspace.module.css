@@ -1,0 +1,40 @@
+.workspace {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.stage {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 16px 0;
+  overflow: auto;
+}
+
+.tab,
+.tabOn {
+  border: 1px solid var(--hairline);
+  border-bottom: none;
+  background: color-mix(in srgb, var(--paper) 55%, var(--desk));
+  padding: 8px 10px 8px 14px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabOn {
+  background: var(--paper);
+}
+
+.close {
+  font-size: 18px;
+  color: var(--muted);
+}
