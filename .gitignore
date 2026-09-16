@@ -41,9 +41,9 @@ Desktop.ini
 win-unpacked/
 
 # Local schoolwork / personal data (never commit)
-storage/
-schoolwork/
-tmp/
+/storage/
+/schoolwork/
+/tmp/
 .studypdf-index.json
 annotations.study.json
 
