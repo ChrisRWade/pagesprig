@@ -35,6 +35,51 @@ export const TEXT_COLOR = '#1A1612'
 
 export const HIGHLIGHT_OPACITY = 0.42
 
+export type ColorableTool = 'pencil' | 'highlighter' | 'line' | 'rect' | 'ellipse' | 'arrow'
+
+export interface ToolSwatch {
+  id: string
+  name: string
+  value: string
+}
+
+/** Opaque crayon colors for pencil, line, box, circle, and arrow. */
+export const INK_SWATCHES: readonly ToolSwatch[] = [
+  { id: 'graphite', name: 'Black', value: PENCIL_COLOR },
+  { id: 'navy', name: 'Blue', value: SHAPE_COLOR },
+  { id: 'brick', name: 'Red', value: '#C44536' },
+  { id: 'forest', name: 'Green', value: '#2F6B4F' },
+  { id: 'grape', name: 'Purple', value: '#6B3FA0' },
+  { id: 'amber', name: 'Orange', value: '#C47B12' }
+]
+
+/** Washed marker colors for the highlighter. */
+export const HIGHLIGHT_SWATCHES: readonly ToolSwatch[] = [
+  { id: 'yellow', name: 'Yellow', value: HIGHLIGHT_COLOR },
+  { id: 'pink', name: 'Pink', value: '#F4A6C1' },
+  { id: 'mint', name: 'Green', value: '#8ED4A4' },
+  { id: 'sky', name: 'Blue', value: '#8EC8F0' },
+  { id: 'peach', name: 'Orange', value: '#F5B57A' },
+  { id: 'lilac', name: 'Purple', value: '#C9B6F2' }
+]
+
+export const DEFAULT_TOOL_COLORS: Record<ColorableTool, string> = {
+  pencil: PENCIL_COLOR,
+  highlighter: HIGHLIGHT_COLOR,
+  line: SHAPE_COLOR,
+  rect: SHAPE_COLOR,
+  ellipse: SHAPE_COLOR,
+  arrow: SHAPE_COLOR
+}
+
+export function isColorableTool(tool: string): tool is ColorableTool {
+  return tool in DEFAULT_TOOL_COLORS
+}
+
+export function swatchesForTool(tool: ColorableTool): readonly ToolSwatch[] {
+  return tool === 'highlighter' ? HIGHLIGHT_SWATCHES : INK_SWATCHES
+}
+
 export const MARK_SIZE_PRESETS = {
   small: 0.018,
   medium: 0.028,

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { MARK_SIZE_PRESETS, markStrokeFactor, type MarkSize } from '@shared/constants'
+import {
+  MARK_SIZE_PRESETS,
+  markStrokeFactor,
+  swatchesForTool,
+  type ColorableTool,
+  type MarkSize
+} from '@shared/constants'
 import type { ToolId } from '@shared/types'
 import { canRedo, canUndo } from '@shared/history'
 import { Button } from '../shared/Button'
@@ -34,6 +40,8 @@ const SIZES: { id: MarkSize; label: string }[] = [
   { id: 'large', label: 'Large' }
 ]
 
+const COLORABLE = new Set<ToolId>(['pencil', 'highlighter', 'line', 'rect', 'ellipse', 'arrow'])
+
 export function Toolbar() {
   const tool = useAppStore((state) => state.tool)
   const setTool = useAppStore((state) => state.setTool)
@@ -43,32 +51,41 @@ export function Toolbar() {
 
   return (
     <aside className={styles.rail} aria-label="Writing tools">
-      {TOOLS.map((item) => (
-        <Button
-          key={item.id}
-          variant="tool"
-          active={tool === item.id}
-          title={`${item.label} (${item.shortcut})`}
-          aria-label={`${item.label} (${item.shortcut})`}
-          onClick={() => setTool(item.id)}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </Button>
-      ))}
+      {TOOLS.map((item) =>
+        COLORABLE.has(item.id) ? (
+          <ColorTool
+            key={item.id}
+            id={item.id as ColorableTool}
+            label={item.label}
+            shortcut={item.shortcut}
+            icon={item.icon}
+            active={tool === item.id}
+            onSelect={() => setTool(item.id)}
+          />
+        ) : (
+          <Button
+            key={item.id}
+            variant="tool"
+            active={tool === item.id}
+            title={`${item.label} (${item.shortcut})`}
+            aria-label={`${item.label} (${item.shortcut})`}
+            onClick={() => setTool(item.id)}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </Button>
+        )
+      )}
       <div className={styles.divider} />
       {SHAPES.map((item) => (
-        <Button
+        <ColorTool
           key={item.id}
-          variant="tool"
+          id={item.id}
+          label={item.label}
+          icon={item.icon}
           active={tool === item.id}
-          title={item.label}
-          aria-label={item.label}
-          onClick={() => setShapeTool(item.id)}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </Button>
+          onSelect={() => setShapeTool(item.id)}
+        />
       ))}
       {MARKS.map((item) => (
         <MarkTool key={item.id} id={item.id} label={item.label} icon={item.icon} active={tool === item.id} />
@@ -98,6 +115,107 @@ export function Toolbar() {
   )
 }
 
+function useHoverMenu(menuHeight: number) {
+  const [open, setOpen] = useState(false)
+  const [menu, setMenu] = useState({ top: 0, left: 0 })
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const closeTimer = useRef(0)
+
+  const showMenu = () => {
+    window.clearTimeout(closeTimer.current)
+    const rect = wrapRef.current?.getBoundingClientRect()
+    if (rect) {
+      setMenu({
+        top: Math.min(rect.top, window.innerHeight - menuHeight),
+        left: rect.right + 8
+      })
+    }
+    setOpen(true)
+  }
+
+  const hideMenu = () => {
+    closeTimer.current = window.setTimeout(() => setOpen(false), 140)
+  }
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), [])
+
+  return { open, setOpen, menu, wrapRef, showMenu, hideMenu }
+}
+
+function ColorTool({
+  id,
+  label,
+  shortcut,
+  icon,
+  active,
+  onSelect
+}: {
+  id: ColorableTool
+  label: string
+  shortcut?: string
+  icon: ReactNode
+  active: boolean
+  onSelect: () => void
+}) {
+  const color = useAppStore((state) => state.toolColors[id])
+  const { open, setOpen, menu, wrapRef, showMenu, hideMenu } = useHoverMenu(72)
+  const swatches = swatchesForTool(id)
+  const title = shortcut ? `${label} (${shortcut})` : label
+
+  const pick = (value: string) => {
+    useAppStore.getState().setToolColor(id, value)
+    onSelect()
+    setOpen(false)
+  }
+
+  return (
+    <div
+      ref={wrapRef}
+      className={styles.markWrap}
+      onMouseEnter={showMenu}
+      onMouseLeave={hideMenu}
+    >
+      <Button
+        variant="tool"
+        active={active}
+        title={`${title}. Hover to choose a color.`}
+        aria-label={title}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onSelect}
+      >
+        {icon}
+        <span>{label}</span>
+        <span className={styles.pip} style={{ background: color }} aria-hidden="true" />
+      </Button>
+      {open && (
+        <div
+          className={styles.colorMenu}
+          role="menu"
+          aria-label={`${label} color`}
+          style={{ top: menu.top, left: menu.left }}
+          onMouseEnter={showMenu}
+          onMouseLeave={hideMenu}
+        >
+          {swatches.map((swatch) => (
+            <button
+              key={swatch.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={color === swatch.value}
+              aria-label={swatch.name}
+              title={swatch.name}
+              className={color === swatch.value ? styles.swatchOn : styles.swatch}
+              style={{ background: swatch.value }}
+              onClick={() => pick(swatch.value)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MarkTool({
   id,
   label,
@@ -110,28 +228,7 @@ function MarkTool({
   active: boolean
 }) {
   const markSize = useAppStore((state) => state.markSize)
-  const [open, setOpen] = useState(false)
-  const [menu, setMenu] = useState({ top: 0, left: 0 })
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const closeTimer = useRef<number>(0)
-
-  const showMenu = () => {
-    window.clearTimeout(closeTimer.current)
-    const rect = wrapRef.current?.getBoundingClientRect()
-    if (rect) {
-      setMenu({
-        top: Math.min(rect.top, window.innerHeight - 168),
-        left: rect.right + 8
-      })
-    }
-    setOpen(true)
-  }
-
-  const hideMenu = () => {
-    closeTimer.current = window.setTimeout(() => setOpen(false), 140)
-  }
-
-  useEffect(() => () => window.clearTimeout(closeTimer.current), [])
+  const { open, setOpen, menu, wrapRef, showMenu, hideMenu } = useHoverMenu(168)
 
   const pick = (size: MarkSize) => {
     useAppStore.getState().setMarkSize(size)
@@ -190,7 +287,7 @@ function MarkPreview({ type, size }: { type: 'checkmark' | 'xmark'; size: MarkSi
   const px = 8 + scale * 14
   const stroke = (1.8 * markStrokeFactor(MARK_SIZE_PRESETS[size])) / Math.max(scale, 0.2)
   return (
-    <svg width={22} height={22} viewBox="0 0 22 22" aria-hidden="true" className={styles.preview}>
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" className={styles.preview}>
       {type === 'checkmark' ? (
         <path
           d="M4 12l4 4 10-10"

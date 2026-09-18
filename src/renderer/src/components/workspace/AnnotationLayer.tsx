@@ -5,11 +5,9 @@ import {
   DEFAULT_PENCIL_WIDTH_PT,
   DEFAULT_SHAPE_WIDTH_PT,
   DEFAULT_TEXT_SIZE_PT,
-  HIGHLIGHT_COLOR,
   HIGHLIGHT_OPACITY,
   MARK_SIZE_PRESETS,
   markStrokeFactor,
-  PENCIL_COLOR,
   SHAPE_COLOR,
   TEXT_COLOR
 } from '@shared/constants'
@@ -21,6 +19,25 @@ import { annotationBounds, createId, hitTestAnnotation, moveAnnotation, nowIso }
 import { cssCursorForTool } from '../../cursors/toolCursors'
 import { useDocumentStore } from '../../stores/documentStore'
 import { useAppStore } from '../../stores/appStore'
+
+const SELECT_HOVER = '#3D7AB5'
+const ERASE_HOVER = '#D24A38'
+const ERASE_HIT = 0.024
+
+function topHit(annotations: Annotation[], point: Point, threshold?: number) {
+  return [...annotations].reverse().find((item) => hitTestAnnotation(item, point, threshold))
+}
+
+function hitsAt(annotations: Annotation[], point: Point, threshold: number) {
+  return annotations.filter((item) => hitTestAnnotation(item, point, threshold))
+}
+
+function sameIds(current: string[], next: string[]) {
+  if (current.length !== next.length) return false
+  if (current.length <= 1) return current[0] === next[0]
+  const seen = new Set(current)
+  return next.every((id) => seen.has(id))
+}
 
 interface TextBox {
   x: number
@@ -67,11 +84,13 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
   const applyDeleteMany = useDocumentStore((state) => state.applyDeleteMany)
   const applyModify = useDocumentStore((state) => state.applyModify)
   const setSelected = useDocumentStore((state) => state.setSelected)
+  const toolColors = useAppStore((state) => state.toolColors)
 
   const hostRef = useRef<HTMLDivElement>(null)
   const [livePoints, setLivePoints] = useState<Point[]>([])
   const [preview, setPreview] = useState<Annotation | null>(null)
   const [selectMode, setSelectMode] = useState<'idle' | 'over' | 'drag'>('idle')
+  const [emphasizedIds, setEmphasizedIds] = useState<string[]>([])
   const dragRef = useRef<{ annotation: Annotation; origin: Point } | null>(null)
   const eraseRef = useRef<Set<string>>(new Set())
   const drawing = useRef(false)
@@ -87,9 +106,14 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
 
   useEffect(() => {
     setSelectMode('idle')
+    setEmphasizedIds([])
   }, [tool])
 
   if (width <= 0 || height <= 0) return null
+
+  const rememberIds = (next: string[]) => {
+    setEmphasizedIds((current) => (sameIds(current, next) ? current : next))
+  }
 
   const commitStroke = (type: 'stroke' | 'highlight', points: Point[]) => {
     if (points.length < 2) return
@@ -105,7 +129,7 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       createdAt: nowIso(),
       updatedAt: nowIso(),
       style: {
-        color: type === 'highlight' ? HIGHLIGHT_COLOR : PENCIL_COLOR,
+        color: type === 'highlight' ? toolColors.highlighter : toolColors.pencil,
         width: type === 'highlight' ? DEFAULT_HIGHLIGHT_WIDTH_PT : DEFAULT_PENCIL_WIDTH_PT,
         opacity: type === 'highlight' ? HIGHLIGHT_OPACITY : 1
       },
@@ -157,11 +181,12 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
     }
 
     if (tool === 'select') {
-      const hit = [...annotations].reverse().find((item) => hitTestAnnotation(item, point))
+      const hit = topHit(annotations, point)
       if (event.detail >= 2 && hit?.type === 'text') {
         drawing.current = false
         dragRef.current = null
         setPreview(null)
+        rememberIds([])
         setSelected(project.id, hit.id)
         onStartText(point, hit, { x: hit.x, y: hit.y, width: hit.width, height: hit.height })
         return
@@ -170,6 +195,7 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       drawing.current = true
       setSelected(project.id, hit?.id ?? null)
       setSelectMode(hit ? 'drag' : 'idle')
+      rememberIds(hit ? [hit.id] : [])
       if (hit) dragRef.current = { annotation: hit, origin: point }
       return
     }
@@ -179,8 +205,9 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
 
     if (tool === 'eraser') {
       eraseRef.current = new Set()
-      const hit = annotations.filter((item) => hitTestAnnotation(item, point, 0.024))
+      const hit = hitsAt(annotations, point, ERASE_HIT)
       hit.forEach((item) => eraseRef.current.add(item.id))
+      rememberIds([...eraseRef.current])
       return
     }
 
@@ -195,7 +222,7 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
         page,
         createdAt: nowIso(),
         updatedAt: nowIso(),
-        style: { color: SHAPE_COLOR, width: DEFAULT_SHAPE_WIDTH_PT, opacity: 1 }
+        style: { color: toolColors[tool], width: DEFAULT_SHAPE_WIDTH_PT, opacity: 1 }
       }
       if (tool === 'line' || tool === 'arrow') {
         setPreview({ ...base, type: tool, x1: point.x, y1: point.y, x2: point.x, y2: point.y })
@@ -209,29 +236,34 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
     if (!hostRef.current) return
     const point = toNormalized(event, hostRef.current)
 
-    if (tool === 'select' && !drawing.current) {
-      const hit = annotations.some((item) => hitTestAnnotation(item, point))
-      setSelectMode((mode) => {
-        const next = hit ? 'over' : 'idle'
-        return mode === next ? mode : next
-      })
-    }
-
-    if (!drawing.current) return
-
-    if (tool === 'select' && dragRef.current) {
-      const dx = point.x - dragRef.current.origin.x
-      const dy = point.y - dragRef.current.origin.y
-      setPreview(moveAnnotation(dragRef.current.annotation, dx, dy))
+    if (tool === 'select') {
+      if (!drawing.current) {
+        const hit = topHit(annotations, point)
+        setSelectMode((mode) => {
+          const next = hit ? 'over' : 'idle'
+          return mode === next ? mode : next
+        })
+        rememberIds(hit ? [hit.id] : [])
+      }
+      if (drawing.current && dragRef.current) {
+        const dx = point.x - dragRef.current.origin.x
+        const dy = point.y - dragRef.current.origin.y
+        setPreview(moveAnnotation(dragRef.current.annotation, dx, dy))
+      }
       return
     }
 
     if (tool === 'eraser') {
-      annotations
-        .filter((item) => hitTestAnnotation(item, point, 0.024))
-        .forEach((item) => eraseRef.current.add(item.id))
+      if (drawing.current) {
+        hitsAt(annotations, point, ERASE_HIT).forEach((item) => eraseRef.current.add(item.id))
+        rememberIds([...eraseRef.current])
+      } else {
+        rememberIds(hitsAt(annotations, point, ERASE_HIT).map((item) => item.id))
+      }
       return
     }
+
+    if (!drawing.current) return
 
     if (tool === 'pencil' || tool === 'highlighter') {
       setLivePoints((current) => {
@@ -260,12 +292,13 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
   const onDoubleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (tool !== 'select' || !hostRef.current) return
     const point = toNormalized(event, hostRef.current)
-    const hit = [...annotations].reverse().find((item) => hitTestAnnotation(item, point))
+    const hit = topHit(annotations, point)
     if (hit?.type !== 'text') return
     drawing.current = false
     dragRef.current = null
     setPreview(null)
     setSelectMode('idle')
+    rememberIds([])
     setSelected(project.id, hit.id)
     onStartText(point, hit, { x: hit.x, y: hit.y, width: hit.width, height: hit.height })
   }
@@ -307,8 +340,9 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       }
       dragRef.current = null
       setPreview(null)
-      const stillOver = annotations.some((item) => hitTestAnnotation(item, point))
-      setSelectMode(stillOver ? 'over' : 'idle')
+      const still = topHit(annotations, point)
+      setSelectMode(still ? 'over' : 'idle')
+      rememberIds(still ? [still.id] : [])
       return
     }
 
@@ -316,6 +350,7 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       const removed = annotations.filter((item) => eraseRef.current.has(item.id))
       applyDeleteMany(project.id, removed)
       eraseRef.current = new Set()
+      rememberIds(hitsAt(annotations, point, ERASE_HIT).filter((item) => !removed.includes(item)).map((item) => item.id))
       return
     }
 
@@ -366,7 +401,9 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerLeave={() => {
-        if (tool === 'select') setSelectMode((mode) => (mode === 'drag' ? mode : 'idle'))
+        if (drawing.current) return
+        setSelectMode((mode) => (mode === 'drag' ? mode : 'idle'))
+        rememberIds([])
       }}
       onDoubleClick={onDoubleClick}
     >
@@ -381,15 +418,28 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
               rendered={rendered}
               pageSize={pageSize}
               selected={annotation.id === selectedId}
+              emphasis={
+                emphasizedIds.includes(annotation.id)
+                  ? tool === 'eraser'
+                    ? 'erase'
+                    : 'select'
+                  : 'none'
+              }
             />
           ))}
           {preview && preview.id === 'preview' && (
-            <DrawnAnnotation annotation={preview} rendered={rendered} pageSize={pageSize} selected={false} />
+            <DrawnAnnotation
+              annotation={preview}
+              rendered={rendered}
+              pageSize={pageSize}
+              selected={false}
+              emphasis="none"
+            />
           )}
           {livePoints.length > 1 && (
             <Line
               points={pointsToFlat(livePoints, rendered)}
-              stroke={tool === 'highlighter' ? HIGHLIGHT_COLOR : PENCIL_COLOR}
+              stroke={tool === 'highlighter' ? toolColors.highlighter : toolColors.pencil}
               opacity={tool === 'highlighter' ? HIGHLIGHT_OPACITY : 1}
               strokeWidth={pdfLengthToScreen(
                 tool === 'highlighter' ? DEFAULT_HIGHLIGHT_WIDTH_PT : DEFAULT_PENCIL_WIDTH_PT,
@@ -411,14 +461,20 @@ function DrawnAnnotation({
   annotation,
   rendered,
   pageSize,
-  selected
+  selected,
+  emphasis
 }: {
   annotation: Annotation
   rendered: Size
   pageSize: Size
   selected: boolean
+  emphasis: 'none' | 'select' | 'erase'
 }) {
   const strokeWidth = styleWidth(annotation, pageSize, rendered)
+  const markStroke =
+    annotation.type === 'checkmark' || annotation.type === 'xmark'
+      ? Math.max(strokeWidth * markStrokeFactor(annotation.size), 1.8)
+      : strokeWidth
   const bounds = annotationBounds(annotation)
   const boxX = Math.max(0, bounds.x * rendered.width - 4)
   const boxY = Math.max(0, bounds.y * rendered.height - 4)
@@ -437,140 +493,190 @@ function DrawnAnnotation({
     />
   ) : null
 
+  const haloWidth =
+    annotation.type === 'highlight'
+      ? markStroke + 5
+      : annotation.type === 'text'
+        ? 3.2
+        : Math.max(markStroke + 3.4, 5.5)
+  const haloColor = emphasis === 'erase' ? ERASE_HOVER : SELECT_HOVER
+
+  return (
+    <Group>
+      {emphasis !== 'none' && (
+        <AnnotationBody
+          annotation={annotation}
+          rendered={rendered}
+          pageSize={pageSize}
+          color={haloColor}
+          opacity={emphasis === 'erase' ? 0.88 : 0.8}
+          strokeWidth={haloWidth}
+          textHalo
+        />
+      )}
+      <AnnotationBody
+        annotation={annotation}
+        rendered={rendered}
+        pageSize={pageSize}
+        color={annotation.style.color || TEXT_COLOR}
+        opacity={annotation.style.opacity}
+        strokeWidth={markStroke}
+      />
+      {selectBox}
+    </Group>
+  )
+}
+
+function AnnotationBody({
+  annotation,
+  rendered,
+  pageSize,
+  color,
+  opacity,
+  strokeWidth,
+  textHalo = false
+}: {
+  annotation: Annotation
+  rendered: Size
+  pageSize: Size
+  color: string
+  opacity: number
+  strokeWidth: number
+  textHalo?: boolean
+}) {
   switch (annotation.type) {
     case 'stroke':
     case 'highlight':
       return (
-        <Group>
-          <Line
-            points={pointsToFlat(annotation.points, rendered)}
-            stroke={annotation.style.color}
-            opacity={annotation.style.opacity}
-            strokeWidth={strokeWidth}
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <Line
+          points={pointsToFlat(annotation.points, rendered)}
+          stroke={color}
+          opacity={opacity}
+          strokeWidth={strokeWidth}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
       )
     case 'line':
       return (
-        <Group>
-          <Line
-            points={[
-              annotation.x1 * rendered.width,
-              annotation.y1 * rendered.height,
-              annotation.x2 * rendered.width,
-              annotation.y2 * rendered.height
-            ]}
-            stroke={annotation.style.color}
-            strokeWidth={strokeWidth}
-            lineCap="round"
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <Line
+          points={[
+            annotation.x1 * rendered.width,
+            annotation.y1 * rendered.height,
+            annotation.x2 * rendered.width,
+            annotation.y2 * rendered.height
+          ]}
+          stroke={color}
+          opacity={opacity}
+          strokeWidth={strokeWidth}
+          lineCap="round"
+          listening={false}
+        />
       )
     case 'arrow':
       return (
-        <Group>
-          <Arrow
-            points={[
-              annotation.x1 * rendered.width,
-              annotation.y1 * rendered.height,
-              annotation.x2 * rendered.width,
-              annotation.y2 * rendered.height
-            ]}
-            stroke={annotation.style.color}
-            fill={annotation.style.color}
-            strokeWidth={strokeWidth}
-            pointerLength={14}
-            pointerWidth={12}
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <Arrow
+          points={[
+            annotation.x1 * rendered.width,
+            annotation.y1 * rendered.height,
+            annotation.x2 * rendered.width,
+            annotation.y2 * rendered.height
+          ]}
+          stroke={color}
+          fill={color}
+          opacity={opacity}
+          strokeWidth={strokeWidth}
+          pointerLength={14}
+          pointerWidth={12}
+          listening={false}
+        />
       )
     case 'rect':
       return (
-        <Group>
-          <Rect
-            x={annotation.x * rendered.width}
-            y={annotation.y * rendered.height}
-            width={annotation.width * rendered.width}
-            height={annotation.height * rendered.height}
-            stroke={annotation.style.color}
-            strokeWidth={strokeWidth}
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <Rect
+          x={annotation.x * rendered.width}
+          y={annotation.y * rendered.height}
+          width={annotation.width * rendered.width}
+          height={annotation.height * rendered.height}
+          stroke={color}
+          opacity={opacity}
+          strokeWidth={strokeWidth}
+          listening={false}
+        />
       )
     case 'ellipse':
       return (
-        <Group>
-          <Ellipse
-            x={(annotation.x + annotation.width / 2) * rendered.width}
-            y={(annotation.y + annotation.height / 2) * rendered.height}
-            radiusX={(annotation.width / 2) * rendered.width}
-            radiusY={(annotation.height / 2) * rendered.height}
-            stroke={annotation.style.color}
-            strokeWidth={strokeWidth}
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <Ellipse
+          x={(annotation.x + annotation.width / 2) * rendered.width}
+          y={(annotation.y + annotation.height / 2) * rendered.height}
+          radiusX={(annotation.width / 2) * rendered.width}
+          radiusY={(annotation.height / 2) * rendered.height}
+          stroke={color}
+          opacity={opacity}
+          strokeWidth={strokeWidth}
+          listening={false}
+        />
       )
     case 'checkmark': {
       const x = annotation.x * rendered.width
       const y = annotation.y * rendered.height
       const size = annotation.size * rendered.width
-      const markStroke = Math.max(strokeWidth * markStrokeFactor(annotation.size), 1.8)
       return (
-        <Group>
-          <Line
-            points={[x, y + size * 0.55, x + size * 0.32, y + size, x + size, y]}
-            stroke={annotation.style.color}
-            strokeWidth={markStroke}
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <Line
+          points={[x, y + size * 0.55, x + size * 0.32, y + size, x + size, y]}
+          stroke={color}
+          opacity={opacity}
+          strokeWidth={strokeWidth}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
       )
     }
     case 'xmark': {
       const x = annotation.x * rendered.width
       const y = annotation.y * rendered.height
       const size = annotation.size * rendered.width
-      const markStroke = Math.max(strokeWidth * markStrokeFactor(annotation.size), 1.8)
       return (
         <Group>
-          <Line points={[x, y, x + size, y + size]} stroke={annotation.style.color} strokeWidth={markStroke} lineCap="round" listening={false} />
-          <Line points={[x + size, y, x, y + size]} stroke={annotation.style.color} strokeWidth={markStroke} lineCap="round" listening={false} />
-          {selectBox}
+          <Line
+            points={[x, y, x + size, y + size]}
+            stroke={color}
+            opacity={opacity}
+            strokeWidth={strokeWidth}
+            lineCap="round"
+            listening={false}
+          />
+          <Line
+            points={[x + size, y, x, y + size]}
+            stroke={color}
+            opacity={opacity}
+            strokeWidth={strokeWidth}
+            lineCap="round"
+            listening={false}
+          />
         </Group>
       )
     }
     case 'text':
       return (
-        <Group>
-          <KonvaText
-            x={annotation.x * rendered.width}
-            y={annotation.y * rendered.height}
-            width={annotation.width * rendered.width}
-            height={annotation.height * rendered.height}
-            text={annotation.text}
-            fill={annotation.style.color || TEXT_COLOR}
-            fontSize={pdfLengthToScreen(annotation.fontSize || DEFAULT_TEXT_SIZE_PT, pageSize, rendered)}
-            fontFamily="Atkinson Hyperlegible, Segoe UI, sans-serif"
-            wrap="word"
-            listening={false}
-          />
-          {selectBox}
-        </Group>
+        <KonvaText
+          x={annotation.x * rendered.width}
+          y={annotation.y * rendered.height}
+          width={annotation.width * rendered.width}
+          height={annotation.height * rendered.height}
+          text={annotation.text}
+          fill={color}
+          stroke={textHalo ? color : undefined}
+          strokeWidth={textHalo ? strokeWidth : 0}
+          fillAfterStrokeEnabled={textHalo}
+          opacity={opacity}
+          fontSize={pdfLengthToScreen(annotation.fontSize || DEFAULT_TEXT_SIZE_PT, pageSize, rendered)}
+          fontFamily="Atkinson Hyperlegible, Segoe UI, sans-serif"
+          wrap="word"
+          listening={false}
+        />
       )
   }
 }
