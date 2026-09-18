@@ -9,6 +9,11 @@
   justify-content: center;
   gap: 8px;
   white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    transform 100ms var(--ease);
 }
 
 .button:active {

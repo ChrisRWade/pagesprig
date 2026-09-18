@@ -3,10 +3,11 @@ import { APP_VERSION, ERROR_CODES } from '@shared/constants'
 import { IPC_CHANNELS } from '@shared/ipc'
 import type { AddNotePageRequest, ExportRequest, ImportRequest, SaveProjectRequest } from '@shared/ipc'
 import type { AppSettings, DocumentProject, SessionState } from '@shared/types'
-import { exportAnnotatedPdf } from '../export/pdfExport'
 import { AppError, err, fromFilesystemError, ok } from '../storage/errors'
 import {
   addNotePage,
+  deleteProject,
+  exportProjectPdf,
   importPdfFiles,
   listDocuments,
   loadLatestCheckpoint,
@@ -102,11 +103,13 @@ export function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.exportPdf, async (_event, request: ExportRequest) => {
     try {
       if (!request?.project) return err('Nothing to export.', ERROR_CODES.VALIDATION)
-      const saved = await saveProjectToDisk(request.project, { exportPdf: true })
-      return ok(await exportAnnotatedPdf(saved))
+      return ok(await exportProjectPdf(request.project))
     } catch (error) {
       if (error instanceof AppError) return err(error.message, error.code)
-      return fromFilesystemError(error, 'Could not create the finished PDF.')
+      return fromFilesystemError(
+        error,
+        'Could not update the finished PDF. Your marks are still saved in StudyPDF.'
+      )
     }
   })
 
@@ -200,6 +203,19 @@ export function registerIpc(): void {
       return ok(result.filePaths)
     } catch (error) {
       return fromFilesystemError(error, 'Could not open the file picker.')
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.deleteDocument, async (_event, projectDir: string) => {
+    try {
+      if (typeof projectDir !== 'string' || projectDir.length === 0) {
+        return err('Missing document folder.', ERROR_CODES.VALIDATION)
+      }
+      await deleteProject(projectDir)
+      return ok(undefined)
+    } catch (error) {
+      if (error instanceof AppError) return err(error.message, error.code)
+      return fromFilesystemError(error, 'Could not remove that worksheet.')
     }
   })
 

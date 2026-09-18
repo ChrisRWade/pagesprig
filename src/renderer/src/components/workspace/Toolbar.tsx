@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { MARK_SIZE_PRESETS, markStrokeFactor, type MarkSize } from '@shared/constants'
 import type { ToolId } from '@shared/types'
 import { canRedo, canUndo } from '@shared/history'
 import { Button } from '../shared/Button'
@@ -16,12 +17,21 @@ const TOOLS: { id: ToolId; label: string; shortcut: string; icon: ReactNode }[] 
   { id: 'eraser', label: 'Eraser', shortcut: 'E', icon: Icons.eraser }
 ]
 
-const SHAPES: { id: 'rect' | 'ellipse' | 'arrow' | 'checkmark' | 'xmark'; label: string; icon: ReactNode }[] = [
+const SHAPES: { id: 'rect' | 'ellipse' | 'arrow'; label: string; icon: ReactNode }[] = [
   { id: 'rect', label: 'Box', icon: Icons.rect },
   { id: 'ellipse', label: 'Circle', icon: Icons.ellipse },
-  { id: 'arrow', label: 'Arrow', icon: Icons.arrow },
+  { id: 'arrow', label: 'Arrow', icon: Icons.arrow }
+]
+
+const MARKS: { id: 'checkmark' | 'xmark'; label: string; icon: ReactNode }[] = [
   { id: 'checkmark', label: 'Check', icon: Icons.check },
   { id: 'xmark', label: 'X', icon: Icons.xmark }
+]
+
+const SIZES: { id: MarkSize; label: string }[] = [
+  { id: 'small', label: 'Small' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'large', label: 'Large' }
 ]
 
 export function Toolbar() {
@@ -60,6 +70,9 @@ export function Toolbar() {
           <span>{item.label}</span>
         </Button>
       ))}
+      {MARKS.map((item) => (
+        <MarkTool key={item.id} id={item.id} label={item.label} icon={item.icon} active={tool === item.id} />
+      ))}
       <div className={styles.divider} />
       <Button
         variant="tool"
@@ -82,5 +95,133 @@ export function Toolbar() {
         <span>Redo</span>
       </Button>
     </aside>
+  )
+}
+
+function MarkTool({
+  id,
+  label,
+  icon,
+  active
+}: {
+  id: 'checkmark' | 'xmark'
+  label: string
+  icon: ReactNode
+  active: boolean
+}) {
+  const markSize = useAppStore((state) => state.markSize)
+  const [open, setOpen] = useState(false)
+  const [menu, setMenu] = useState({ top: 0, left: 0 })
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const closeTimer = useRef<number>(0)
+
+  const showMenu = () => {
+    window.clearTimeout(closeTimer.current)
+    const rect = wrapRef.current?.getBoundingClientRect()
+    if (rect) {
+      setMenu({
+        top: Math.min(rect.top, window.innerHeight - 168),
+        left: rect.right + 8
+      })
+    }
+    setOpen(true)
+  }
+
+  const hideMenu = () => {
+    closeTimer.current = window.setTimeout(() => setOpen(false), 140)
+  }
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), [])
+
+  const pick = (size: MarkSize) => {
+    useAppStore.getState().setMarkSize(size)
+    useAppStore.getState().setShapeTool(id)
+    setOpen(false)
+  }
+
+  return (
+    <div
+      ref={wrapRef}
+      className={styles.markWrap}
+      onMouseEnter={showMenu}
+      onMouseLeave={hideMenu}
+    >
+      <Button
+        variant="tool"
+        active={active}
+        title={`${label}. Hover to choose a size.`}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => pick(markSize)}
+      >
+        {icon}
+        <span>{label}</span>
+      </Button>
+      {open && (
+        <div
+          className={styles.sizeMenu}
+          role="menu"
+          aria-label={`${label} size`}
+          style={{ top: menu.top, left: menu.left }}
+          onMouseEnter={showMenu}
+          onMouseLeave={hideMenu}
+        >
+          {SIZES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              className={markSize === item.id ? styles.sizeOn : styles.size}
+              onClick={() => pick(item.id)}
+            >
+              <MarkPreview type={id} size={item.id} />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MarkPreview({ type, size }: { type: 'checkmark' | 'xmark'; size: MarkSize }) {
+  const scale = MARK_SIZE_PRESETS[size] / MARK_SIZE_PRESETS.large
+  const px = 8 + scale * 14
+  const stroke = (1.8 * markStrokeFactor(MARK_SIZE_PRESETS[size])) / Math.max(scale, 0.2)
+  return (
+    <svg width={22} height={22} viewBox="0 0 22 22" aria-hidden="true" className={styles.preview}>
+      {type === 'checkmark' ? (
+        <path
+          d="M4 12l4 4 10-10"
+          transform={`translate(11 11) scale(${scale}) translate(-11 -11)`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <>
+          <path
+            d="M6 6l10 10"
+            transform={`translate(11 11) scale(${scale}) translate(-11 -11)`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+          />
+          <path
+            d="M16 6L6 16"
+            transform={`translate(11 11) scale(${scale}) translate(-11 -11)`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+          />
+        </>
+      )}
+      <circle cx="11" cy="11" r={px / 2} fill="none" stroke="currentColor" strokeOpacity="0.18" />
+    </svg>
   )
 }

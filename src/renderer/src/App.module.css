@@ -9,6 +9,7 @@
   display: grid;
   grid-template-rows: var(--header-h) 1fr;
   min-height: 0;
+  animation: enterView var(--duration-ui) var(--ease);
 }
 
 .body {
@@ -23,17 +24,6 @@
   font-size: 28px;
 }
 
-.banner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: #f4e1d8;
-  color: var(--danger);
-  border-bottom: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-}
-
 .modal {
   position: fixed;
   inset: 0;
@@ -41,6 +31,7 @@
   display: grid;
   place-items: center;
   z-index: 20;
+  animation: fadeIn var(--duration-ui) var(--ease);
 }
 
 .dialog {
@@ -48,6 +39,7 @@
   background: var(--paper);
   padding: 24px;
   box-shadow: var(--shadow-paper);
+  animation: popIn var(--duration-ui) var(--ease);
 }
 
 .dialog h2 {
@@ -59,4 +51,35 @@
   display: flex;
   gap: 8px;
   margin-top: 20px;
+}
+
+@keyframes enterView {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

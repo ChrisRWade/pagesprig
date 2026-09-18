@@ -25,6 +25,9 @@ export function StudentPicker() {
     <main className={styles.wrap}>
       <p className={styles.kicker}>StudyPDF</p>
       <h1>Who is working?</h1>
+      {students.length === 0 && (
+        <p className={styles.empty}>No students yet. Open Settings to add the first child.</p>
+      )}
       <ul className={styles.grid}>
         {students.map((student) => (
           <li key={student.id}>

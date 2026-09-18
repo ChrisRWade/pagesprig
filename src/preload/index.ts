@@ -29,6 +29,7 @@ const api: StudyApi = {
   getRecovery: () => ipcRenderer.invoke(IPC_CHANNELS.getRecovery),
   openExternal: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.openExternal, filePath),
   selectPdfFiles: () => ipcRenderer.invoke(IPC_CHANNELS.selectPdfFiles),
+  deleteDocument: (projectDir: string) => ipcRenderer.invoke(IPC_CHANNELS.deleteDocument, projectDir),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.getVersion)
 }

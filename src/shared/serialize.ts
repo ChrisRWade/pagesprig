@@ -1,5 +1,5 @@
 import { PROJECT_VERSION } from './constants'
-import type { Annotation, DocumentProject, PageAnnotations, PageSpec } from './types'
+import type { Annotation, DocumentProject, DocumentSummary, PageAnnotations, PageSpec } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -168,12 +168,43 @@ export function parseDocumentProject(value: unknown): DocumentProject | null {
     createdAt: value.createdAt as string,
     updatedAt: value.updatedAt as string,
     lastOpenedAt: value.lastOpenedAt as string,
+    lastExportedAt: isString(value.lastExportedAt) ? value.lastExportedAt : null,
     fingerprint: value.fingerprint as string
   }
 }
 
 export function serializeProject(project: DocumentProject): string {
   return `${JSON.stringify(project, null, 2)}\n`
+}
+
+export function toSummary(project: DocumentProject): DocumentSummary {
+  return {
+    id: project.id,
+    studentId: project.studentId,
+    subjectId: project.subjectId,
+    date: project.date,
+    title: project.title,
+    status: project.status,
+    projectDir: project.projectDir,
+    exportPdfPath: project.exportPdfPath,
+    sourcePdfPath: project.sourcePdfPath,
+    originalFilename: project.originalFilename,
+    updatedAt: project.updatedAt,
+    lastOpenedAt: project.lastOpenedAt,
+    lastExportedAt: project.lastExportedAt ?? null,
+    pageCount: project.pages.length
+  }
+}
+
+export function mergeDocumentCatalog(
+  listed: DocumentSummary[],
+  openProjects: DocumentProject[]
+): DocumentSummary[] {
+  const byId = new Map(listed.map((item) => [item.id, item]))
+  for (const project of openProjects) {
+    byId.set(project.id, toSummary(project))
+  }
+  return [...byId.values()]
 }
 
 export function fingerprintFromFile(mtimeMs: number, size: number): string {

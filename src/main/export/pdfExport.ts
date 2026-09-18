@@ -1,7 +1,7 @@
 import { copyFile, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { PDFDocument, PDFPage, rgb, StandardFonts, type RGB } from 'pdf-lib'
-import { ERROR_CODES, ORIGINAL_PDF_FILE } from '@shared/constants'
+import { ERROR_CODES, ORIGINAL_PDF_FILE, markStrokeFactor } from '@shared/constants'
 import { normalizedToPdf, normalizedBoxToPdf } from '@shared/coords'
 import type { Annotation, DocumentProject, PageSpec, Point } from '@shared/types'
 import { AppError } from '../storage/errors'
@@ -158,36 +158,36 @@ async function drawAnnotation(
       return
     }
     case 'checkmark': {
-      const origin = toPdf({ x: annotation.x, y: annotation.y }, spec)
-      const size = annotation.size * spec.width
+      const size = annotation.size
+      const start = toPdf({ x: annotation.x, y: annotation.y + size * 0.55 }, spec)
+      const mid = toPdf({ x: annotation.x + size * 0.32, y: annotation.y + size }, spec)
+      const end = toPdf({ x: annotation.x + size, y: annotation.y }, spec)
       pdfPage.drawSvgPath(
-        `M ${origin.x} ${origin.y + size * 0.45} L ${origin.x + size * 0.28} ${origin.y} L ${origin.x + size} ${origin.y + size}`,
+        `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${mid.x.toFixed(2)} ${mid.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`,
         {
           borderColor: color,
-          borderWidth: Math.max(borderWidth, 1.8),
           borderOpacity: opacity,
+          borderWidth: Math.max(borderWidth * markStrokeFactor(size), 1.6),
           borderLineCap: 1
         }
       )
       return
     }
     case 'xmark': {
-      const origin = toPdf({ x: annotation.x, y: annotation.y }, spec)
-      const size = annotation.size * spec.width
-      pdfPage.drawLine({
-        start: origin,
-        end: { x: origin.x + size, y: origin.y + size },
-        thickness: borderWidth,
-        color,
-        opacity
-      })
-      pdfPage.drawLine({
-        start: { x: origin.x, y: origin.y + size },
-        end: { x: origin.x + size, y: origin.y },
-        thickness: borderWidth,
-        color,
-        opacity
-      })
+      const size = annotation.size
+      const topLeft = toPdf({ x: annotation.x, y: annotation.y }, spec)
+      const topRight = toPdf({ x: annotation.x + size, y: annotation.y }, spec)
+      const bottomLeft = toPdf({ x: annotation.x, y: annotation.y + size }, spec)
+      const bottomRight = toPdf({ x: annotation.x + size, y: annotation.y + size }, spec)
+      const markWidth = Math.max(borderWidth * markStrokeFactor(size), 1.6)
+      pdfPage.drawSvgPath(
+        `M ${topLeft.x.toFixed(2)} ${topLeft.y.toFixed(2)} L ${bottomRight.x.toFixed(2)} ${bottomRight.y.toFixed(2)}`,
+        { borderColor: color, borderOpacity: opacity, borderWidth: markWidth, borderLineCap: 1 }
+      )
+      pdfPage.drawSvgPath(
+        `M ${topRight.x.toFixed(2)} ${topRight.y.toFixed(2)} L ${bottomLeft.x.toFixed(2)} ${bottomLeft.y.toFixed(2)}`,
+        { borderColor: color, borderOpacity: opacity, borderWidth: markWidth, borderLineCap: 1 }
+      )
       return
     }
     case 'text': {

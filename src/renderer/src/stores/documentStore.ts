@@ -10,14 +10,16 @@ import {
   undoHistory,
   type HistoryState
 } from '@shared/history'
-import type { Annotation, DocumentProject, SaveStatus } from '@shared/types'
+import type { Annotation, DocumentProject, ExportStatus, SaveStatus } from '@shared/types'
 
 interface OpenDocument {
   project: DocumentProject
   pdfBytes: ArrayBuffer | null
   saveStatus: SaveStatus
+  exportStatus: ExportStatus
   history: HistoryState
   selectedAnnotationId: string | null
+  revision: number
 }
 
 interface DocumentState {
@@ -28,7 +30,9 @@ interface DocumentState {
   closeDocument: (id: string) => void
   setActive: (id: string | null) => void
   patchProject: (id: string, project: DocumentProject, markDirty?: boolean) => void
+  acceptFingerprint: (id: string, fingerprint: string) => void
   setSaveStatus: (id: string, saveStatus: SaveStatus) => void
+  setExportStatus: (id: string, exportStatus: ExportStatus) => void
   setPdfBytes: (id: string, pdfBytes: ArrayBuffer) => void
   setSelected: (id: string, annotationId: string | null) => void
   applyAdd: (id: string, annotation: Annotation) => void
@@ -36,6 +40,20 @@ interface DocumentState {
   applyModify: (id: string, before: Annotation, after: Annotation) => void
   undo: (id: string) => void
   redo: (id: string) => void
+}
+
+function withEdit(
+  current: OpenDocument,
+  project: DocumentProject,
+  extra?: Partial<OpenDocument>
+): OpenDocument {
+  return {
+    ...current,
+    ...extra,
+    project,
+    saveStatus: 'saving',
+    revision: current.revision + 1
+  }
 }
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
@@ -53,8 +71,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
               project,
               pdfBytes,
               saveStatus: 'saved',
+              exportStatus: 'idle',
               history: createHistory(),
-              selectedAnnotationId: null
+              selectedAnnotationId: null,
+              revision: 0
             }
       },
       openOrder: get().openOrder.includes(project.id) ? get().openOrder : [...get().openOrder, project.id],
@@ -74,10 +94,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       open: {
         ...get().open,
+        [id]: markDirty
+          ? withEdit(current, project)
+          : { ...current, project }
+      }
+    })
+  },
+  acceptFingerprint: (id, fingerprint) => {
+    const current = get().open[id]
+    if (!current) return
+    set({
+      open: {
+        ...get().open,
         [id]: {
           ...current,
-          project,
-          saveStatus: markDirty ? 'saving' : current.saveStatus
+          project: { ...current.project, fingerprint },
+          saveStatus: 'saving'
         }
       }
     })
@@ -86,6 +118,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const current = get().open[id]
     if (!current) return
     set({ open: { ...get().open, [id]: { ...current, saveStatus } } })
+  },
+  setExportStatus: (id, exportStatus) => {
+    const current = get().open[id]
+    if (!current) return
+    set({ open: { ...get().open, [id]: { ...current, exportStatus } } })
   },
   setPdfBytes: (id, pdfBytes) => {
     const current = get().open[id]
@@ -104,15 +141,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       open: {
         ...get().open,
-        [id]: {
-          ...current,
-          project: {
+        [id]: withEdit(
+          current,
+          {
             ...next.project,
             status: next.project.status === 'not_started' ? 'in_progress' : next.project.status
           },
-          history: next.history,
-          saveStatus: 'saving'
-        }
+          { history: next.history }
+        )
       }
     })
   },
@@ -123,7 +159,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       open: {
         ...get().open,
-        [id]: { ...current, project: next.project, history: next.history, saveStatus: 'saving', selectedAnnotationId: null }
+        [id]: withEdit(current, next.project, { history: next.history, selectedAnnotationId: null })
       }
     })
   },
@@ -134,7 +170,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       open: {
         ...get().open,
-        [id]: { ...current, project: next.project, history: next.history, saveStatus: 'saving' }
+        [id]: withEdit(current, next.project, { history: next.history })
       }
     })
   },
@@ -146,7 +182,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       open: {
         ...get().open,
-        [id]: { ...current, project: next.project, history: next.history, saveStatus: 'saving' }
+        [id]: withEdit(current, next.project, { history: next.history })
       }
     })
   },
@@ -158,7 +194,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       open: {
         ...get().open,
-        [id]: { ...current, project: next.project, history: next.history, saveStatus: 'saving' }
+        [id]: withEdit(current, next.project, { history: next.history })
       }
     })
   }

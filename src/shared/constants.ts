@@ -7,12 +7,16 @@ export const PROJECT_VERSION = 1
 export const DEFAULT_FOLDER_TEMPLATE = '{student}/{year}/{month}/{date}/{subject}'
 export const DEFAULT_FILENAME_TEMPLATE = '{date} - {subject} - {originalName}'
 
-export const AUTOSAVE_DEBOUNCE_MS = 350
+export const AUTOSAVE_DEBOUNCE_MS = 800
 export const RECOVERY_CHECKPOINT_MS = 30_000
 export const RECOVERY_CHECKPOINT_LIMIT = 8
 export const HISTORY_LIMIT = 250
-export const VIRTUALIZATION_BUFFER = 2
+export const VIRTUALIZATION_BUFFER = 1
 export const SESSION_HEARTBEAT_MS = 4_000
+export const TOAST_ERROR_MS = 10_000
+export const BANNER_DISMISS_MS = TOAST_ERROR_MS
+export const TOAST_SUCCESS_MS = 5_000
+export const TOAST_EXIT_MS = 180
 
 export const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const
 
@@ -30,6 +34,20 @@ export const SHAPE_COLOR = '#1F4E79'
 export const TEXT_COLOR = '#1A1612'
 
 export const HIGHLIGHT_OPACITY = 0.42
+
+export const MARK_SIZE_PRESETS = {
+  small: 0.018,
+  medium: 0.028,
+  large: 0.04
+} as const
+
+export type MarkSize = keyof typeof MARK_SIZE_PRESETS
+
+/** Keep smaller checks/Xs bold so they stay readable. */
+export function markStrokeFactor(size: number): number {
+  const t = Math.min(1, Math.max(0, size / MARK_SIZE_PRESETS.large))
+  return 1 + (1 - t) * 0.55
+}
 
 export const ANNOTATIONS_FILE = 'annotations.study.json'
 export const ORIGINAL_PDF_FILE = 'original.pdf'

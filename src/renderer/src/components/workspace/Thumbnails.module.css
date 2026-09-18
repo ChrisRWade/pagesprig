@@ -1,9 +1,23 @@
 .side {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 52px;
   width: 92px;
-  border-left: 1px solid var(--hairline);
+  z-index: 6;
   padding: 12px 8px;
   overflow: auto;
   background: var(--tray);
+  border-left: 1px solid var(--hairline);
+  box-shadow: -10px 0 24px rgba(62, 43, 18, 0.12);
+  transform: translateX(100%);
+  transition: transform var(--duration-panel) var(--ease-move);
+  pointer-events: none;
+}
+
+.open {
+  transform: translateX(0);
+  pointer-events: auto;
 }
 
 .thumb {
@@ -18,11 +32,25 @@
   font-size: 12px;
   margin-bottom: 10px;
   min-height: 44px;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.thumbOn {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .sheet {
   width: 52px;
-  height: 68px;
+  height: auto;
+  display: block;
   background: var(--paper);
   box-shadow: 0 6px 12px rgba(62, 43, 18, 0.14);
+  transition:
+    box-shadow var(--duration-fast) var(--ease),
+    outline-color var(--duration-fast) var(--ease);
+}
+
+.thumbOn .sheet {
+  box-shadow: 0 0 0 2px var(--focus), 0 8px 16px rgba(62, 43, 18, 0.16);
 }

@@ -1,8 +1,7 @@
 import { formatTime } from '@shared/utils'
 import { Button } from '../shared/Button'
-import { openSummary } from '../today/TodayView'
+import { openProject, openSummary } from '../../services/documents'
 import { useAppStore } from '../../stores/appStore'
-import { useDocumentStore } from '../../stores/documentStore'
 import styles from './RecoveryScreen.module.css'
 
 export function RecoveryScreen() {
@@ -22,13 +21,8 @@ export function RecoveryScreen() {
       useAppStore.getState().setError(loaded.error)
       return
     }
-    const bytes = await window.studyApi.readPdf(loaded.data.sourcePdfPath)
-    if (!bytes.ok) {
-      useAppStore.getState().setError(bytes.error)
-      return
-    }
-    useDocumentStore.getState().openDocument(loaded.data, bytes.data)
-    setView('main')
+    const opened = await openProject(loaded.data)
+    if (opened) setView('main')
   }
 
   return (

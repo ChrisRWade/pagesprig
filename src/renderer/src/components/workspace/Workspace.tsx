@@ -1,11 +1,11 @@
-import { forgetPdf } from '../../services/pdfRenderer'
-import { saveNow } from '../../services/autosave'
+import { useEffect } from 'react'
 import { useAppStore } from '../../stores/appStore'
 import { useDocumentStore } from '../../stores/documentStore'
 import { PdfViewer } from './PdfViewer'
 import { PageControls } from './PageControls'
 import { Toolbar } from './Toolbar'
 import { Thumbnails } from './Thumbnails'
+import { DocumentSwitcher } from './DocumentSwitcher'
 import styles from './Workspace.module.css'
 
 export function Workspace() {
@@ -13,7 +13,21 @@ export function Workspace() {
   const open = useDocumentStore((state) => state.open)
   const activeId = useDocumentStore((state) => state.activeId)
   const thumbnailsOpen = useAppStore((state) => state.thumbnailsOpen)
+  const settings = useAppStore((state) => state.settings)
   const active = activeId ? open[activeId] : null
+  const tabs = openOrder.filter((id) => {
+    const doc = open[id]
+    return (
+      Boolean(doc) &&
+      doc.project.studentId === settings.selectedStudentId &&
+      doc.project.subjectId === settings.selectedSubjectId
+    )
+  })
+  const pageCount = active?.project.pages.length ?? 0
+
+  useEffect(() => {
+    if (pageCount <= 1) useAppStore.getState().setThumbnailsOpen(false)
+  }, [pageCount])
 
   if (!active) return null
 
@@ -21,42 +35,16 @@ export function Workspace() {
     <section className={styles.workspace}>
       <Toolbar />
       <div className={styles.stage}>
-        {openOrder.length > 1 && (
-          <div className={styles.tabs} role="tablist" aria-label="Open worksheets">
-            {openOrder.map((id) => {
-              const doc = open[id]
-              if (!doc) return null
-              return (
-                <button
-                  key={id}
-                  role="tab"
-                  aria-selected={id === activeId}
-                  className={id === activeId ? styles.tabOn : styles.tab}
-                  onClick={() => useDocumentStore.getState().setActive(id)}
-                >
-                  {doc.project.title}
-                  <span
-                    className={styles.close}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      void (async () => {
-                        await saveNow(id, true)
-                        forgetPdf(id)
-                        useDocumentStore.getState().closeDocument(id)
-                      })()
-                    }}
-                  >
-                    ×
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-        <PdfViewer project={active.project} pdfBytes={active.pdfBytes} />
+        <PdfViewer project={active.project} />
         <PageControls project={active.project} />
+        <DocumentSwitcher
+          documents={tabs
+            .map((id) => open[id]?.project)
+            .filter((item): item is NonNullable<typeof item> => Boolean(item))}
+          activeId={active.project.id}
+        />
+        {pageCount > 1 && <Thumbnails project={active.project} open={thumbnailsOpen} />}
       </div>
-      {thumbnailsOpen && <Thumbnails project={active.project} />}
     </section>
   )
 }

@@ -1,46 +1,257 @@
 .wrap {
-  padding: 32px 48px;
   height: 100%;
   overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 32px 24px 72px;
+}
+
+.sheet {
+  width: min(880px, 100%);
+  padding: 28px 36px 40px 48px;
+  background:
+    linear-gradient(
+      to right,
+      transparent 28px,
+      color-mix(in srgb, #c45c4a 50%, transparent) 28px,
+      color-mix(in srgb, #c45c4a 50%, transparent) 29px,
+      transparent 29px
+    ),
+    var(--paper);
+  box-shadow: var(--shadow-paper);
+  animation: enterSheet var(--duration-ui) var(--ease);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
-.filters {
-  display: flex;
-  gap: 8px;
-  margin: 16px 0 24px;
+.kicker {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-.filters input,
-.filters select {
-  min-height: 40px;
+.header h1 {
+  font-size: 34px;
+  line-height: 1.15;
+}
+
+.search {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.search input,
+.controls select,
+.dates input {
+  width: 100%;
+  min-height: 44px;
   border: 1px solid var(--hairline);
-  background: var(--paper);
-  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--tray) 45%, var(--paper));
+  padding: 0 12px;
 }
 
-.list {
-  list-style: none;
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.controls label,
+.dates label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
   padding: 0;
+  border: none;
+}
+
+.chips legend {
+  padding: 0;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chip,
+.chipOn {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tray) 70%, var(--paper));
+  color: var(--graphite);
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    transform 100ms var(--ease);
+}
+
+.chip:hover,
+.chipOn {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.chipOn {
+  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  font-weight: 700;
+}
+
+.chip:active,
+.chipOn:active {
+  transform: scale(0.97);
+}
+
+.dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 18px;
+  color: var(--muted);
+}
+
+.summary p {
+  margin: 0;
+}
+
+.group {
+  margin-bottom: 28px;
+}
+
+.group h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.list,
+.group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--paper) 88%, var(--tray));
 }
 
 .row {
   width: 100%;
-  min-height: 48px;
+  min-height: 64px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
   border: none;
-  border-bottom: 1px solid var(--hairline);
   background: transparent;
   text-align: left;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--tray) 45%, transparent);
+}
+
+.copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+}
+
+.detail {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.empty {
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 14px;
+}
+
+.not_started,
+.in_progress,
+.completed {
+  font-size: 13px;
+  color: var(--graphite);
+}
+
+.completed {
+  color: var(--saved);
+}
+
+.in_progress {
+  color: var(--focus);
+}
+
+@keyframes enterSheet {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .sheet {
+    padding: 24px 20px 32px 36px;
+  }
+
+  .controls,
+  .dates {
+    grid-template-columns: 1fr;
+  }
+
+  .header h1 {
+    font-size: 28px;
+  }
 }

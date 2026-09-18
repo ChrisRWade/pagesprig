@@ -35,14 +35,28 @@
   font-size: 22px;
   font-family: var(--font-display);
   box-shadow: var(--shadow-paper);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .card:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.card:active {
+  transform: scale(0.97);
 }
 
 .avatar {
   font-size: 36px;
+}
+
+.empty {
+  color: var(--graphite);
+  max-width: 42ch;
+  margin-bottom: 16px;
 }
 
 .settings {

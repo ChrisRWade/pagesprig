@@ -24,6 +24,10 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+  --duration-fast: 140ms;
+  --duration-ui: 180ms;
+  --duration-panel: 220ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

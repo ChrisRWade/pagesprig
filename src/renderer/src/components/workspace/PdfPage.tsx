@@ -7,6 +7,13 @@ import { TextEditorOverlay } from './TextEditorOverlay'
 import type { ToolId } from '@shared/types'
 import styles from './PdfPage.module.css'
 
+interface TextBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 interface Props {
   project: DocumentProject
   pdf: PDFDocumentProxy | null
@@ -14,69 +21,96 @@ interface Props {
   width: number
   active: boolean
   tool: ToolId
+  priority?: number
 }
 
-export function PdfPage({ project, pdf, page, width, active, tool }: Props) {
+export function PdfPage({ project, pdf, page, width, active, tool, priority = 1 }: Props) {
   const spec = project.pages.find((item) => item.page === page)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState({ width, height: width * (792 / 612) })
-  const [editing, setEditing] = useState<{ point: Point; existing?: TextAnnotation } | null>(null)
+  const [ready, setReady] = useState(spec?.source !== 'original')
+  const [editing, setEditing] = useState<{ point: Point; existing?: TextAnnotation; box: TextBox } | null>(
+    null
+  )
 
   const pageSize = { width: spec?.width ?? 612, height: spec?.height ?? 792 }
   const height = width * (pageSize.height / pageSize.width)
+  const source = spec?.source
+  const originalPage = spec?.originalPage
 
   useEffect(() => {
-    setSize({ width, height })
+    setSize((current) => (current.width === width && current.height === height ? current : { width, height }))
   }, [width, height])
 
   useEffect(() => {
-    if (!active || !canvasRef.current || !spec) return
+    if (!active || !canvasRef.current || !source) return
     let cancelled = false
     const canvas = canvasRef.current
+    if (source === 'original' && canvas.dataset.rendered !== '1') setReady(false)
     const run = async () => {
-      if (spec.source === 'original' && spec.originalPage && pdf) {
-        const rendered = await renderPdfPage(pdf, spec.originalPage, canvas, width)
-        if (!cancelled) setSize(rendered)
-      } else {
-        renderNotePage(canvas, spec.source, width, height)
+      if (source === 'original') {
+        if (!originalPage || !pdf) return
+        const rendered = await renderPdfPage(pdf, originalPage, canvas, width, {
+          priority,
+          cacheId: `${project.id}:${originalPage}`
+        })
+        if (!cancelled) {
+          setSize((current) =>
+            current.width === rendered.width && current.height === rendered.height ? current : rendered
+          )
+          setReady(true)
+        }
+        return
       }
+      renderNotePage(canvas, source, width, height)
+      if (!cancelled) setReady(true)
     }
     void run()
     return () => {
       cancelled = true
     }
-  }, [active, pdf, spec, width, height])
+  }, [active, height, originalPage, pdf, priority, project.id, source, width])
 
   if (!spec) return null
 
   return (
     <article className={styles.page} style={{ width: size.width, height: size.height }} aria-label={`Page ${page}`}>
-      <canvas ref={canvasRef} className={styles.canvas} />
-      {active && (
+      <canvas ref={canvasRef} className={`${styles.canvas} ${ready ? styles.canvasReady : ''}`} />
+      {!ready && (
+        <div className={styles.wait} aria-hidden="true">
+          <span>Preparing this page…</span>
+        </div>
+      )}
+      {active && ready && (
         <AnnotationLayer
           project={project}
           page={page}
           width={size.width}
           height={size.height}
           tool={tool}
-          onStartText={(point: Point, existing?: Annotation) => {
+          editingText={Boolean(editing)}
+          onStartText={(point: Point, existing: Annotation | undefined, box: TextBox) => {
             setEditing({
               point,
-              existing: existing?.type === 'text' ? existing : undefined
+              existing: existing?.type === 'text' ? existing : undefined,
+              box
             })
           }}
         />
       )}
       {active && editing && (
-        <TextEditorOverlay
-          documentId={project.id}
-          page={page}
-          point={editing.point}
-          existing={editing.existing}
-          rendered={size}
-          pageSize={pageSize}
-          onClose={() => setEditing(null)}
-        />
+        <div className={styles.editorLayer}>
+          <TextEditorOverlay
+            key={`${editing.existing?.id ?? 'new'}-${editing.box.x}-${editing.box.y}-${editing.box.width}-${editing.box.height}`}
+            documentId={project.id}
+            page={page}
+            existing={editing.existing}
+            box={editing.box}
+            rendered={size}
+            pageSize={pageSize}
+            onClose={() => setEditing(null)}
+          />
+        </div>
       )}
     </article>
   )

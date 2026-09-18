@@ -1,0 +1,35 @@
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  transform: rotate(-1.5deg);
+  cursor: help;
+  transition:
+    color var(--duration-ui) var(--ease),
+    background-color var(--duration-ui) var(--ease),
+    border-color var(--duration-ui) var(--ease);
+}
+
+.current {
+  color: var(--saved);
+  background: color-mix(in srgb, var(--saved) 10%, var(--paper));
+}
+
+.stale,
+.exporting {
+  color: #8a4b12;
+  background: color-mix(in srgb, #e4b15a 22%, var(--paper));
+}
+
+.missing {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--paper));
+}

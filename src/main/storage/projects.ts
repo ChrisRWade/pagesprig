@@ -1,26 +1,19 @@
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { dialog } from 'electron'
-import {
-  ANNOTATIONS_FILE,
-  ERROR_CODES,
-  INDEX_FILE,
-  PROJECT_VERSION
-} from '@shared/constants'
+import { ERROR_CODES, PROJECT_VERSION } from '@shared/constants'
 import { applyTemplate, templateContext, uniqueName } from '@shared/pathTemplate'
 import { emptyPageAnnotations, serializeProject } from '@shared/serialize'
 import type { AppSettings, DocumentProject, DocumentSummary, PageSource, Student } from '@shared/types'
-import { createId, nowIso } from '@shared/utils'
+import { createId, localIsoDate, nowIso } from '@shared/utils'
 import { copyOriginalPdf, exportAnnotatedPdf, fileFingerprint, inspectPdf } from '../export/pdfExport'
 import { AppError, isInsideRoot } from './errors'
 import { atomicWriteFile, ensureDir, readTextIfExists } from './atomic'
+import { rebuildDocumentIndex, upsertIndex } from './documentIndex'
 import { annotationsPath, loadSettings } from './settingsStore'
 
 export { loadLatestCheckpoint, loadProjectFromDisk, writeCheckpoint } from './projectIo'
-
-export function indexPath(storageRoot: string): string {
-  return path.join(storageRoot, INDEX_FILE)
-}
+export { indexPath } from './documentIndex'
 
 export async function selectStorageDirectory(): Promise<string | null> {
   const result = await dialog.showOpenDialog({
@@ -31,64 +24,9 @@ export async function selectStorageDirectory(): Promise<string | null> {
   return result.filePaths[0]
 }
 
-async function readIndex(storageRoot: string): Promise<DocumentSummary[]> {
-  const raw = await readTextIfExists(indexPath(storageRoot))
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw) as { documents?: DocumentSummary[] }
-    return Array.isArray(parsed.documents) ? parsed.documents : []
-  } catch {
-    return []
-  }
-}
-
-async function writeIndex(storageRoot: string, documents: DocumentSummary[]): Promise<void> {
-  await atomicWriteFile(
-    indexPath(storageRoot),
-    `${JSON.stringify({ version: 1, documents }, null, 2)}\n`
-  )
-}
-
-export function toSummary(project: DocumentProject): DocumentSummary {
-  return {
-    id: project.id,
-    studentId: project.studentId,
-    subjectId: project.subjectId,
-    date: project.date,
-    title: project.title,
-    status: project.status,
-    projectDir: project.projectDir,
-    exportPdfPath: project.exportPdfPath,
-    sourcePdfPath: project.sourcePdfPath,
-    originalFilename: project.originalFilename,
-    updatedAt: project.updatedAt,
-    lastOpenedAt: project.lastOpenedAt,
-    pageCount: project.pages.length
-  }
-}
-
-async function upsertIndex(storageRoot: string, project: DocumentProject): Promise<void> {
-  const documents = await readIndex(storageRoot)
-  const next = [toSummary(project), ...documents.filter((item) => item.id !== project.id)]
-  await writeIndex(storageRoot, next)
-}
-
 export async function listDocuments(settings: AppSettings): Promise<DocumentSummary[]> {
   if (!settings.storageRoot) return []
-  const indexed = await readIndex(settings.storageRoot)
-  const existing: DocumentSummary[] = []
-  for (const item of indexed) {
-    try {
-      await stat(path.join(item.projectDir, ANNOTATIONS_FILE))
-      existing.push(item)
-    } catch {
-      // Drop entries whose project folder disappeared.
-    }
-  }
-  if (existing.length !== indexed.length) {
-    await writeIndex(settings.storageRoot, existing)
-  }
-  return existing
+  return rebuildDocumentIndex(settings.storageRoot)
 }
 
 export async function saveProjectToDisk(
@@ -118,13 +56,16 @@ export async function saveProjectToDisk(
   const next: DocumentProject = {
     ...project,
     version: PROJECT_VERSION,
-    updatedAt: nowIso()
+    updatedAt: project.updatedAt || nowIso()
   }
   await atomicWriteFile(target, serializeProject(next))
   next.fingerprint = await fileFingerprint(target)
 
   if (options.exportPdf) {
     await exportAnnotatedPdf(next)
+    next.lastExportedAt = nowIso()
+    await atomicWriteFile(target, serializeProject(next))
+    next.fingerprint = await fileFingerprint(target)
   }
 
   await upsertIndex(settings.storageRoot, next)
@@ -143,7 +84,7 @@ export async function importPdfFiles(
   filePaths: string[],
   studentId: string,
   subjectId: string,
-  date = new Date().toISOString().slice(0, 10)
+  date = localIsoDate()
 ): Promise<DocumentProject[]> {
   const settings = await loadSettings()
   if (!settings.storageRoot) {
@@ -174,36 +115,42 @@ export async function importPdfFiles(
     const baseName = uniqueName(siblingNames, applyTemplate(settings.filenameTemplate, context))
     siblingNames.add(baseName.toLowerCase())
     const projectDir = path.join(settings.storageRoot, folderRel, baseName)
-    await ensureDir(projectDir)
-    const sourcePdfPath = await copyOriginalPdf(filePath, projectDir)
-    const createdAt = nowIso()
-    const project: DocumentProject = {
-      version: PROJECT_VERSION,
-      id: createId(),
-      studentId,
-      subjectId,
-      date,
-      title: originalName,
-      originalFilename: path.basename(filePath),
-      sourcePdfPath,
-      projectDir,
-      exportPdfPath: path.join(projectDir, `${baseName}.pdf`),
-      pages: info.pages.map((size, index) => ({
-        page: index + 1,
-        source: 'original',
-        originalPage: index + 1,
-        width: size.width,
-        height: size.height
-      })),
-      annotations: emptyPageAnnotations(info.pageCount),
-      status: 'not_started',
-      createdAt,
-      updatedAt: createdAt,
-      lastOpenedAt: createdAt,
-      fingerprint: '0'
+    try {
+      await ensureDir(projectDir)
+      const sourcePdfPath = await copyOriginalPdf(filePath, projectDir)
+      const createdAt = nowIso()
+      const project: DocumentProject = {
+        version: PROJECT_VERSION,
+        id: createId(),
+        studentId,
+        subjectId,
+        date,
+        title: originalName,
+        originalFilename: path.basename(filePath),
+        sourcePdfPath,
+        projectDir,
+        exportPdfPath: path.join(projectDir, `${baseName}.pdf`),
+        pages: info.pages.map((size, index) => ({
+          page: index + 1,
+          source: 'original',
+          originalPage: index + 1,
+          width: size.width,
+          height: size.height
+        })),
+        annotations: emptyPageAnnotations(info.pageCount),
+        status: 'not_started',
+        createdAt,
+        updatedAt: createdAt,
+        lastOpenedAt: createdAt,
+        lastExportedAt: null,
+        fingerprint: '0'
+      }
+      const saved = await saveProjectToDisk(project)
+      created.push(saved)
+    } catch (error) {
+      await rm(projectDir, { recursive: true, force: true }).catch(() => undefined)
+      throw error
     }
-    const saved = await saveProjectToDisk(project)
-    created.push(saved)
   }
 
   return created
@@ -224,10 +171,32 @@ export async function addNotePage(project: DocumentProject, source: PageSource):
   return saveProjectToDisk(next, { expectedFingerprint: project.fingerprint })
 }
 
-export async function readPdfBytes(filePath: string, storageRoot: string | null): Promise<ArrayBuffer> {
+export async function exportProjectPdf(project: DocumentProject): Promise<DocumentProject> {
+  await exportAnnotatedPdf(project)
+  return saveProjectToDisk(
+    { ...project, lastExportedAt: nowIso() },
+    { expectedFingerprint: project.fingerprint }
+  )
+}
+
+export async function readPdfBytes(filePath: string, storageRoot: string | null): Promise<Uint8Array> {
   if (!storageRoot || !isInsideRoot(storageRoot, filePath)) {
     throw new AppError('That file is outside the schoolwork folder.', ERROR_CODES.INVALID_PATH)
   }
   const bytes = await readFile(filePath)
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  return copy
+}
+
+export async function deleteProject(projectDir: string): Promise<void> {
+  const settings = await loadSettings()
+  if (!settings.storageRoot) {
+    throw new AppError('Choose a schoolwork folder in Settings first.', ERROR_CODES.STORAGE_UNAVAILABLE)
+  }
+  if (!isInsideRoot(settings.storageRoot, projectDir)) {
+    throw new AppError('That document is outside the schoolwork folder.', ERROR_CODES.INVALID_PATH)
+  }
+  await rm(projectDir, { recursive: true, force: true })
+  await listDocuments(settings)
 }

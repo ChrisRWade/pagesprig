@@ -12,7 +12,10 @@ export function annotationsFile(projectDir: string): string {
   return path.join(projectDir, ANNOTATIONS_FILE)
 }
 
-export async function loadProjectFromDisk(projectDir: string): Promise<DocumentProject> {
+export async function loadProjectFromDisk(
+  projectDir: string,
+  options: { touchOpened?: boolean } = {}
+): Promise<DocumentProject> {
   const raw = await readTextIfExists(annotationsFile(projectDir))
   if (!raw) {
     throw new AppError('This schoolwork file could not be found.', ERROR_CODES.MISSING_SOURCE)
@@ -32,7 +35,10 @@ export async function loadProjectFromDisk(projectDir: string): Promise<DocumentP
   } catch {
     project.fingerprint = fingerprintFromFile(Date.now(), raw.length)
   }
-  project.lastOpenedAt = nowIso()
+  project.projectDir = projectDir
+  if (options.touchOpened !== false) {
+    project.lastOpenedAt = nowIso()
+  }
   return project
 }
 

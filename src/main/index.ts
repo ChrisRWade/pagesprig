@@ -1,8 +1,11 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc/register'
+import { registerPdfProtocol, registerPdfScheme } from './protocol'
 import { markCleanExit } from './recovery/session'
 import { createMainWindow } from './windows'
+
+registerPdfScheme()
 
 process.env.APP_ROOT = join(__dirname, '../..')
 
@@ -18,6 +21,7 @@ app.on('web-contents-created', (_event, contents) => {
 })
 
 app.whenReady().then(() => {
+  registerPdfProtocol()
   registerIpc()
   createMainWindow()
 

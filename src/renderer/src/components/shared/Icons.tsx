@@ -3,7 +3,7 @@ import type { ReactNode, SVGProps } from 'react'
 function Svg(props: SVGProps<SVGSVGElement> & { title: string; children: ReactNode }) {
   const { title, children, ...rest } = props
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...rest}>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" overflow="visible" aria-hidden="true" {...rest}>
       <title>{title}</title>
       {children}
     </svg>
@@ -75,14 +75,19 @@ export const Icons = {
   ),
   undo: (
     <Svg title="Undo">
-      <path d="M8 8H4v4" />
-      <path d="M4 8c3-4 13-4 16 2" />
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11" />
     </Svg>
   ),
   redo: (
     <Svg title="Redo">
-      <path d="M16 8h4v4" />
-      <path d="M20 8c-3-4-13-4-16 2" />
+      <path d="m15 14 5-5-5-5" />
+      <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13" />
+    </Svg>
+  ),
+  chevron: (
+    <Svg title="Open list">
+      <path d="M6 9l6 6 6-6" />
     </Svg>
   )
 }

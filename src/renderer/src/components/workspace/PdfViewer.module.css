@@ -1,5 +1,6 @@
 .scroller {
   height: 100%;
+  min-height: 0;
   overflow: auto;
   padding: 28px 24px 80px;
 }

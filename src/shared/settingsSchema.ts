@@ -69,7 +69,10 @@ export function parseSettings(value: unknown): AppSettings {
       typeof value.folderTemplate === 'string' ? value.folderTemplate : DEFAULT_FOLDER_TEMPLATE,
     filenameTemplate:
       typeof value.filenameTemplate === 'string' ? value.filenameTemplate : DEFAULT_FILENAME_TEMPLATE,
-    autosaveMs: typeof value.autosaveMs === 'number' ? value.autosaveMs : AUTOSAVE_DEBOUNCE_MS,
+    autosaveMs:
+      typeof value.autosaveMs === 'number' && value.autosaveMs !== 350
+        ? value.autosaveMs
+        : AUTOSAVE_DEBOUNCE_MS,
     recoveryCheckpoints:
       typeof value.recoveryCheckpoints === 'number'
         ? value.recoveryCheckpoints

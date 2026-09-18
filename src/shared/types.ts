@@ -129,6 +129,7 @@ export interface DocumentProject {
   createdAt: string
   updatedAt: string
   lastOpenedAt: string
+  lastExportedAt?: string | null
   fingerprint: string
 }
 
@@ -145,6 +146,7 @@ export interface DocumentSummary {
   originalFilename: string
   updatedAt: string
   lastOpenedAt: string
+  lastExportedAt?: string | null
   pageCount: number
 }
 
@@ -196,6 +198,8 @@ export interface RecoveryInfo {
 }
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+export type ExportStatus = 'idle' | 'exporting' | 'error'
 
 export interface TemplateContext {
   student: string

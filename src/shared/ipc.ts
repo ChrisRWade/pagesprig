@@ -50,9 +50,9 @@ export interface StudyApi {
   importPdfs: (request: ImportRequest) => Promise<IpcResult<DocumentProject[]>>
   loadProject: (projectDir: string) => Promise<IpcResult<DocumentProject>>
   saveProject: (request: SaveProjectRequest) => Promise<IpcResult<DocumentProject>>
-  exportPdf: (request: ExportRequest) => Promise<IpcResult<string>>
+  exportPdf: (request: ExportRequest) => Promise<IpcResult<DocumentProject>>
   listDocuments: () => Promise<IpcResult<DocumentSummary[]>>
-  readPdf: (filePath: string) => Promise<IpcResult<ArrayBuffer>>
+  readPdf: (filePath: string) => Promise<IpcResult<Uint8Array>>
   addNotePage: (request: AddNotePageRequest) => Promise<IpcResult<DocumentProject>>
   writeCheckpoint: (project: DocumentProject) => Promise<IpcResult<string>>
   loadCheckpoint: (projectDir: string) => Promise<IpcResult<DocumentProject>>
@@ -62,6 +62,7 @@ export interface StudyApi {
   getRecovery: () => Promise<IpcResult<RecoveryInfo[]>>
   openExternal: (filePath: string) => Promise<IpcResult<void>>
   selectPdfFiles: () => Promise<IpcResult<string[]>>
+  deleteDocument: (projectDir: string) => Promise<IpcResult<void>>
   getPathForFile: (file: File) => string
   getVersion: () => Promise<string>
 }
@@ -85,5 +86,6 @@ export const IPC_CHANNELS = {
   getRecovery: 'session:recovery',
   openExternal: 'shell:openExternal',
   selectPdfFiles: 'docs:selectPdfs',
+  deleteDocument: 'docs:delete',
   getVersion: 'app:version'
 } as const

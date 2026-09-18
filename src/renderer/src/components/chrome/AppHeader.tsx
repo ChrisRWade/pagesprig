@@ -1,6 +1,8 @@
 import { Button } from '../shared/Button'
+import { ExportStamp } from '../shared/ExportStamp'
 import { useAppStore } from '../../stores/appStore'
 import { useDocumentStore } from '../../stores/documentStore'
+import { refreshDocuments } from '../../services/documents'
 import styles from './AppHeader.module.css'
 
 export function AppHeader() {
@@ -8,10 +10,15 @@ export function AppHeader() {
   const setSettings = useAppStore((state) => state.setSettings)
   const setView = useAppStore((state) => state.setView)
   const thumbnailsOpen = useAppStore((state) => state.thumbnailsOpen)
-  const student = settings.students.find((item) => item.id === settings.selectedStudentId)
-  const saveStatus = useDocumentStore((state) =>
-    state.activeId ? state.open[state.activeId]?.saveStatus : 'idle'
+  const pageCount = useDocumentStore((state) =>
+    state.activeId ? state.open[state.activeId]?.project.pages.length ?? 0 : 0
   )
+  const student = settings.students.find((item) => item.id === settings.selectedStudentId)
+  const active = useDocumentStore((state) =>
+    state.activeId ? state.open[state.activeId] ?? null : null
+  )
+  const saveStatus = active?.saveStatus ?? 'idle'
+  const exportStatus = active?.exportStatus ?? 'idle'
 
   if (!student) return null
 
@@ -63,23 +70,48 @@ export function AppHeader() {
         </nav>
       </div>
       <div className={styles.right}>
-        <span className={styles.status} aria-live="polite">
-          {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Not saved' : 'Saved'}
-        </span>
+        {active && (
+          <>
+            <span
+              className={saveStatus === 'error' ? styles.marksBad : styles.marks}
+              aria-live="polite"
+              title="StudyPDF keeps your marks automatically while you work."
+            >
+              {saveStatus === 'saving'
+                ? 'Saving marks…'
+                : saveStatus === 'error'
+                  ? 'Marks not saved'
+                  : 'Marks saved'}
+            </span>
+            <ExportStamp
+              updatedAt={active.project.updatedAt}
+              lastExportedAt={active.project.lastExportedAt}
+              exporting={exportStatus === 'exporting'}
+            />
+          </>
+        )}
         <Button variant="ghost" onClick={() => setView('recent')}>
           Recent
         </Button>
-        <Button
-          variant="ghost"
-          aria-pressed={thumbnailsOpen}
-          onClick={() => useAppStore.getState().setThumbnailsOpen(!thumbnailsOpen)}
-        >
-          Pages
-        </Button>
+        {pageCount > 1 && (
+          <Button
+            variant="ghost"
+            aria-pressed={thumbnailsOpen}
+            onClick={() => useAppStore.getState().setThumbnailsOpen(!thumbnailsOpen)}
+          >
+            Pages
+          </Button>
+        )}
         <Button variant="ghost" onClick={() => useAppStore.getState().openSettings()}>
           Settings
         </Button>
-        <Button variant="ghost" onClick={() => useDocumentStore.getState().setActive(null)}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            useDocumentStore.getState().setActive(null)
+            void refreshDocuments()
+          }}
+        >
           Today
         </Button>
       </div>

@@ -70,6 +70,23 @@ export function useKeyboard(): void {
         if (activeId) void saveNow(activeId, true)
         return
       }
+      if (event.key === 'PageDown' || event.key === 'PageUp' || event.key === 'Home' || event.key === 'End') {
+        const doc = activeId ? docs.open[activeId] : null
+        if (!doc) return
+        event.preventDefault()
+        const last = doc.project.pages.length
+        const current = app.currentPage
+        const next =
+          event.key === 'Home'
+            ? 1
+            : event.key === 'End'
+              ? last
+              : event.key === 'PageDown'
+                ? current + 1
+                : current - 1
+        app.requestPage(Math.min(last, Math.max(1, next)))
+        return
+      }
       if (event.key === '=' || event.key === '+') {
         event.preventDefault()
         app.zoomIn()

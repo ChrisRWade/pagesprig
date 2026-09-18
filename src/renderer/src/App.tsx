@@ -9,8 +9,10 @@ import { SetupWizard } from './components/setup/SetupWizard'
 import { TodayView } from './components/today/TodayView'
 import { Workspace } from './components/workspace/Workspace'
 import { Button } from './components/shared/Button'
+import { ToastHost } from './components/shared/ToastHost'
 import { useKeyboard, useSessionHeartbeat } from './hooks/useInput'
 import { useAutosave } from './services/autosave'
+import { openProject, ensureReadable, refreshDocuments, useCatalogDocuments } from './services/documents'
 import { useAppStore } from './stores/appStore'
 import { useDocumentStore } from './stores/documentStore'
 import styles from './App.module.css'
@@ -18,9 +20,7 @@ import styles from './App.module.css'
 export default function App() {
   const view = useAppStore((state) => state.view)
   const settings = useAppStore((state) => state.settings)
-  const error = useAppStore((state) => state.error)
-  const saveError = useAppStore((state) => state.saveError)
-  const documents = useAppStore((state) => state.documents)
+  const documents = useCatalogDocuments()
   const pendingDrop = useAppStore((state) => state.pendingDrop)
   const activeId = useDocumentStore((state) => state.activeId)
 
@@ -62,16 +62,15 @@ export default function App() {
       useAppStore.getState().setError(result.error)
       return
     }
-    const list = await window.studyApi.listDocuments()
-    if (list.ok) useAppStore.getState().setDocuments(list.data)
-    const first = result.data[0]
-    const bytes = await window.studyApi.readPdf(first.sourcePdfPath)
-    if (!bytes.ok) {
-      useAppStore.getState().setError(bytes.error)
-      return
+    await refreshDocuments()
+    let opened = false
+    for (const project of result.data) {
+      if (!opened) {
+        opened = await openProject(project, { discardIfUnreadable: true })
+      } else {
+        await ensureReadable(project, { discardIfUnreadable: true })
+      }
     }
-    useDocumentStore.getState().openDocument(first, bytes.data)
-    useAppStore.getState().setView('main')
   }
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -92,17 +91,7 @@ export default function App() {
       onDragOver={(event) => event.preventDefault()}
       onDrop={onDrop}
     >
-      {(error || saveError) && (
-        <div className={styles.banner} role="alert">
-          {saveError ?? error}
-          <Button variant="ghost" onClick={() => {
-            useAppStore.getState().setError(null)
-            useAppStore.getState().setSaveError(null)
-          }}>
-            Dismiss
-          </Button>
-        </div>
-      )}
+      <ToastHost />
       {view === 'loading' && <main className={styles.center}>Opening StudyPDF…</main>}
       {view === 'setup' && <SetupWizard />}
       {view === 'recovery' && <RecoveryScreen />}
@@ -121,6 +110,7 @@ export default function App() {
           </div>
         </div>
       )}
+      {view === 'main' && !student && <StudentPicker />}
       {pendingDrop.length > 0 && student && subject && (
         <div className={styles.modal} role="dialog" aria-labelledby="drop-title">
           <div className={styles.dialog}>

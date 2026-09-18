@@ -18,7 +18,7 @@ export function fromFilesystemError(error: unknown, fallback = 'Could not save s
   }
   if (code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') {
     return err(
-      'The file is in use or the folder is not writable. Close other programs and check Google Drive or OneDrive.',
+      'A file is busy. Close the finished PDF if it is open, wait a moment, and try again. Check Google Drive or OneDrive if the folder is syncing.',
       ERROR_CODES.FILE_LOCKED
     )
   }
@@ -34,7 +34,9 @@ export function fromFilesystemError(error: unknown, fallback = 'Could not save s
 export function isInsideRoot(root: string, target: string): boolean {
   const resolvedRoot = path.resolve(root)
   const resolvedTarget = path.resolve(target)
-  const relative = path.relative(resolvedRoot, resolvedTarget)
+  const from = process.platform === 'win32' ? resolvedRoot.toLowerCase() : resolvedRoot
+  const to = process.platform === 'win32' ? resolvedTarget.toLowerCase() : resolvedTarget
+  const relative = path.relative(from, to)
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
 }
 

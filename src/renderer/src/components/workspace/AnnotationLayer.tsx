@@ -7,6 +7,8 @@ import {
   DEFAULT_TEXT_SIZE_PT,
   HIGHLIGHT_COLOR,
   HIGHLIGHT_OPACITY,
+  MARK_SIZE_PRESETS,
+  markStrokeFactor,
   PENCIL_COLOR,
   SHAPE_COLOR,
   TEXT_COLOR
@@ -17,6 +19,14 @@ import { simplifyStroke } from '@shared/simplify'
 import type { Annotation, DocumentProject, Point, Size, ToolId } from '@shared/types'
 import { annotationBounds, createId, hitTestAnnotation, moveAnnotation, nowIso } from '@shared/utils'
 import { useDocumentStore } from '../../stores/documentStore'
+import { useAppStore } from '../../stores/appStore'
+
+interface TextBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
 interface Props {
   project: DocumentProject
@@ -24,7 +34,8 @@ interface Props {
   width: number
   height: number
   tool: ToolId
-  onStartText: (point: Point, existing?: Annotation) => void
+  editingText: boolean
+  onStartText: (point: Point, existing: Annotation | undefined, box: TextBox) => void
 }
 
 function styleWidth(annotation: Annotation, pageSize: Size, rendered: Size): number {
@@ -43,7 +54,7 @@ function toNormalized(event: ReactPointerEvent<HTMLDivElement> | { clientX: numb
   })
 }
 
-export function AnnotationLayer({ project, page, width, height, tool, onStartText }: Props) {
+export function AnnotationLayer({ project, page, width, height, tool, editingText, onStartText }: Props) {
   const pageSpec = project.pages.find((item) => item.page === page)
   const pageSize = { width: pageSpec?.width ?? 612, height: pageSpec?.height ?? 792 }
   const rendered = useMemo(() => ({ width, height }), [width, height])
@@ -62,6 +73,7 @@ export function AnnotationLayer({ project, page, width, height, tool, onStartTex
   const dragRef = useRef<{ annotation: Annotation; origin: Point } | null>(null)
   const eraseRef = useRef<Set<string>>(new Set())
   const drawing = useRef(false)
+  const textPointRef = useRef<Point | null>(null)
 
   useEffect(() => {
     const onUp = () => {
@@ -75,7 +87,11 @@ export function AnnotationLayer({ project, page, width, height, tool, onStartTex
 
   const commitStroke = (type: 'stroke' | 'highlight', points: Point[]) => {
     if (points.length < 2) return
-    const simplified = simplifyStroke(points)
+    const simplified = simplifyStroke(points).map((point) => ({
+      ...point,
+      x: Math.min(1, Math.max(0, point.x)),
+      y: Math.min(1, Math.max(0, point.y))
+    }))
     applyAdd(project.id, {
       id: createId(),
       type,
@@ -94,6 +110,46 @@ export function AnnotationLayer({ project, page, width, height, tool, onStartTex
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!hostRef.current || event.button !== 0) return
     const point = toNormalized(event, hostRef.current)
+
+    if (tool === 'checkmark' || tool === 'xmark') {
+      const size = MARK_SIZE_PRESETS[useAppStore.getState().markSize]
+      applyAdd(project.id, {
+        id: createId(),
+        type: tool,
+        page,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+        style: { color: SHAPE_COLOR, width: DEFAULT_SHAPE_WIDTH_PT, opacity: 1 },
+        x: point.x - size / 2,
+        y: point.y - size / 2,
+        size
+      })
+      return
+    }
+
+    if (tool === 'text') {
+      textPointRef.current = point
+      drawing.current = true
+      hostRef.current.setPointerCapture(event.pointerId)
+      dragRef.current = {
+        annotation: {
+          id: 'preview',
+          type: 'rect',
+          page,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+          style: { color: SHAPE_COLOR, width: 1, opacity: 0.9 },
+          x: point.x,
+          y: point.y,
+          width: 0.001,
+          height: 0.001
+        },
+        origin: point
+      }
+      setPreview(dragRef.current.annotation)
+      return
+    }
+
     hostRef.current.setPointerCapture(event.pointerId)
     drawing.current = true
 
@@ -111,31 +167,8 @@ export function AnnotationLayer({ project, page, width, height, tool, onStartTex
       return
     }
 
-    if (tool === 'text') {
-      const existing = [...annotations]
-        .reverse()
-        .find((item) => item.type === 'text' && hitTestAnnotation(item, point))
-      onStartText(point, existing)
-      return
-    }
-
     if (tool === 'pencil' || tool === 'highlighter') {
       setLivePoints([point])
-      return
-    }
-
-    if (tool === 'checkmark' || tool === 'xmark') {
-      applyAdd(project.id, {
-        id: createId(),
-        type: tool,
-        page,
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-        style: { color: SHAPE_COLOR, width: DEFAULT_SHAPE_WIDTH_PT, opacity: 1 },
-        x: point.x - 0.02,
-        y: point.y - 0.02,
-        size: 0.04
-      })
       return
     }
 
@@ -202,6 +235,30 @@ export function AnnotationLayer({ project, page, width, height, tool, onStartTex
     const point = toNormalized(event, hostRef.current)
     drawing.current = false
 
+    if (tool === 'text' && textPointRef.current) {
+      const start = textPointRef.current
+      textPointRef.current = null
+      dragRef.current = null
+      setPreview(null)
+      const dragged = Math.hypot(point.x - start.x, point.y - start.y) > 0.012
+      const existingHit = !dragged
+        ? [...annotations].reverse().find((item) => item.type === 'text' && hitTestAnnotation(item, start))
+        : undefined
+      const existing = existingHit?.type === 'text' ? existingHit : undefined
+      const box = dragged
+        ? {
+            x: Math.min(start.x, point.x),
+            y: Math.min(start.y, point.y),
+            width: Math.max(Math.abs(point.x - start.x), 0.08),
+            height: Math.max(Math.abs(point.y - start.y), 0.04)
+          }
+        : existing
+          ? { x: existing.x, y: existing.y, width: existing.width, height: existing.height }
+          : { x: start.x, y: start.y, width: 0.32, height: 0.1 }
+      onStartText(start, existing, box)
+      return
+    }
+
     if (tool === 'select' && dragRef.current) {
       const dx = point.x - dragRef.current.origin.x
       const dy = point.y - dragRef.current.origin.y
@@ -250,13 +307,19 @@ export function AnnotationLayer({ project, page, width, height, tool, onStartTex
     <div
       ref={hostRef}
       className="annotation-host"
-      style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        touchAction: 'none',
+        overflow: 'hidden',
+        pointerEvents: editingText ? 'none' : 'auto'
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
       <Stage width={width} height={height} listening={false}>
-        <Layer listening={false}>
+        <Layer listening={false} clipX={0} clipY={0} clipWidth={width} clipHeight={height}>
           {shown.map((annotation) => (
             <DrawnAnnotation
               key={annotation.id}
@@ -303,12 +366,16 @@ function DrawnAnnotation({
 }) {
   const strokeWidth = styleWidth(annotation, pageSize, rendered)
   const bounds = annotationBounds(annotation)
+  const boxX = Math.max(0, bounds.x * rendered.width - 4)
+  const boxY = Math.max(0, bounds.y * rendered.height - 4)
+  const boxRight = Math.min(rendered.width, (bounds.x + bounds.width) * rendered.width + 4)
+  const boxBottom = Math.min(rendered.height, (bounds.y + bounds.height) * rendered.height + 4)
   const selectBox = selected ? (
     <Rect
-      x={bounds.x * rendered.width - 4}
-      y={bounds.y * rendered.height - 4}
-      width={bounds.width * rendered.width + 8}
-      height={bounds.height * rendered.height + 8}
+      x={boxX}
+      y={boxY}
+      width={Math.max(2, boxRight - boxX)}
+      height={Math.max(2, boxBottom - boxY)}
       stroke="#1f4e79"
       dash={[5, 4]}
       strokeWidth={1}
@@ -405,12 +472,13 @@ function DrawnAnnotation({
       const x = annotation.x * rendered.width
       const y = annotation.y * rendered.height
       const size = annotation.size * rendered.width
+      const markStroke = Math.max(strokeWidth * markStrokeFactor(annotation.size), 1.8)
       return (
         <Group>
           <Line
             points={[x, y + size * 0.55, x + size * 0.32, y + size, x + size, y]}
             stroke={annotation.style.color}
-            strokeWidth={Math.max(strokeWidth, 2.4)}
+            strokeWidth={markStroke}
             lineCap="round"
             lineJoin="round"
             listening={false}
@@ -423,10 +491,11 @@ function DrawnAnnotation({
       const x = annotation.x * rendered.width
       const y = annotation.y * rendered.height
       const size = annotation.size * rendered.width
+      const markStroke = Math.max(strokeWidth * markStrokeFactor(annotation.size), 1.8)
       return (
         <Group>
-          <Line points={[x, y, x + size, y + size]} stroke={annotation.style.color} strokeWidth={strokeWidth} lineCap="round" listening={false} />
-          <Line points={[x + size, y, x, y + size]} stroke={annotation.style.color} strokeWidth={strokeWidth} lineCap="round" listening={false} />
+          <Line points={[x, y, x + size, y + size]} stroke={annotation.style.color} strokeWidth={markStroke} lineCap="round" listening={false} />
+          <Line points={[x + size, y, x, y + size]} stroke={annotation.style.color} strokeWidth={markStroke} lineCap="round" listening={false} />
           {selectBox}
         </Group>
       )
@@ -438,10 +507,12 @@ function DrawnAnnotation({
             x={annotation.x * rendered.width}
             y={annotation.y * rendered.height}
             width={annotation.width * rendered.width}
+            height={annotation.height * rendered.height}
             text={annotation.text}
             fill={annotation.style.color || TEXT_COLOR}
             fontSize={pdfLengthToScreen(annotation.fontSize || DEFAULT_TEXT_SIZE_PT, pageSize, rendered)}
             fontFamily="Atkinson Hyperlegible, Segoe UI, sans-serif"
+            wrap="word"
             listening={false}
           />
           {selectBox}

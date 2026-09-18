@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addAnnotation, parseAnnotation, parseDocumentProject, serializeProject } from './serialize'
+import { addAnnotation, mergeDocumentCatalog, parseAnnotation, parseDocumentProject, serializeProject } from './serialize'
 import type { DocumentProject, StrokeAnnotation, TextAnnotation } from './types'
 
 function sampleProject(): DocumentProject {
@@ -60,6 +60,16 @@ describe('annotation serialization', () => {
     const project = addAnnotation(sampleProject(), text)
     const parsed = parseDocumentProject(JSON.parse(serializeProject(project)))
     expect(parsed?.annotations[0].annotations[0]).toEqual(text)
+    expect(parsed?.lastExportedAt).toBeNull()
+  })
+
+  it('keeps a finished-PDF timestamp when one exists', () => {
+    const project = {
+      ...sampleProject(),
+      lastExportedAt: '2026-09-16T13:00:00.000Z'
+    }
+    const parsed = parseDocumentProject(JSON.parse(serializeProject(project)))
+    expect(parsed?.lastExportedAt).toBe('2026-09-16T13:00:00.000Z')
   })
 
   it('rejects an unknown future project version', () => {
@@ -73,5 +83,32 @@ describe('annotation serialization', () => {
       annotations: [{ page: 1, annotations: [{ id: 'bad' }, { not: 'an annotation' }] }]
     })
     expect(parsed?.annotations[0].annotations).toEqual([])
+  })
+})
+
+describe('document catalog', () => {
+  it('keeps open worksheets even if they disappeared from the list', () => {
+    const listed = [
+      {
+        id: 'visible',
+        studentId: 'chris',
+        subjectId: 'math',
+        date: '2026-09-17',
+        title: 'Shown',
+        status: 'in_progress' as const,
+        projectDir: '/shown',
+        exportPdfPath: '/shown.pdf',
+        sourcePdfPath: '/original.pdf',
+        originalFilename: 'shown.pdf',
+        updatedAt: '2026-09-17T12:00:00.000Z',
+        lastOpenedAt: '2026-09-17T12:00:00.000Z',
+        pageCount: 1
+      }
+    ]
+    const hidden = sampleProject()
+    hidden.id = 'hidden'
+    hidden.title = 'Still open'
+    const merged = mergeDocumentCatalog(listed, [hidden])
+    expect(merged.map((item) => item.id).sort()).toEqual(['hidden', 'visible'])
   })
 })

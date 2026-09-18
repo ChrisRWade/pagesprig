@@ -77,4 +77,59 @@ describe('PDF export', () => {
     const exportedDoc = await PDFDocument.load(exported)
     expect(exportedDoc.getPageCount()).toBe(1)
   })
+
+  it('keeps check and x marks on the page instead of drawing them above it', () => {
+    const spec = { width: 612, height: 792 }
+    const mark = { x: 0.5, y: 0.4, size: 0.04 }
+    const topLeft = normalizedToPdf({ x: mark.x, y: mark.y }, spec)
+    const bottom = normalizedToPdf({ x: mark.x + mark.size, y: mark.y + mark.size }, spec)
+    expect(topLeft.y).toBeLessThan(spec.height)
+    expect(bottom.y).toBeGreaterThan(0)
+    expect(topLeft.y).toBeGreaterThan(bottom.y)
+    expect(topLeft.x).toBeLessThan(bottom.x)
+  })
+
+  it('exports check marks and x marks onto the finished PDF', async () => {
+    const dir = path.join(tmpdir(), `studypdf-marks-${Date.now()}`)
+    await mkdir(dir, { recursive: true })
+    const originalPath = path.join(dir, ORIGINAL_PDF_FILE)
+    const source = await PDFDocument.create()
+    source.addPage([612, 792])
+    const originalBytes = await source.save()
+    await writeFile(originalPath, originalBytes)
+    const createdAt = nowIso()
+    const exportedPath = await exportAnnotatedPdf(
+      project(dir, originalPath, {
+        annotations: emptyPageAnnotations(1).map((page) => ({
+          ...page,
+          annotations: [
+            {
+              id: 'check-1',
+              type: 'checkmark',
+              page: 1,
+              createdAt,
+              updatedAt: createdAt,
+              style: { color: '#1F4E79', width: 2, opacity: 1 },
+              x: 0.2,
+              y: 0.3,
+              size: 0.04
+            },
+            {
+              id: 'x-1',
+              type: 'xmark',
+              page: 1,
+              createdAt,
+              updatedAt: createdAt,
+              style: { color: '#1F4E79', width: 2, opacity: 1 },
+              x: 0.5,
+              y: 0.3,
+              size: 0.04
+            }
+          ]
+        }))
+      })
+    )
+    const exported = await readFile(exportedPath)
+    expect(exported.length).toBeGreaterThan(originalBytes.length)
+  })
 })

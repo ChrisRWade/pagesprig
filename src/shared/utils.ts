@@ -21,13 +21,26 @@ export function annotationBounds(annotation: Annotation): {
   switch (annotation.type) {
     case 'stroke':
     case 'highlight': {
+      if (annotation.points.length === 0) {
+        return { x: 0, y: 0, width: 0.002, height: 0.002 }
+      }
       const xs = annotation.points.map((p) => p.x)
       const ys = annotation.points.map((p) => p.y)
-      const minX = Math.min(...xs, 0)
-      const minY = Math.min(...ys, 0)
-      const maxX = Math.max(...xs, 0)
-      const maxY = Math.max(...ys, 0)
-      return { x: minX, y: minY, width: Math.max(maxX - minX, 0.002), height: Math.max(maxY - minY, 0.002) }
+      const minX = Math.min(...xs)
+      const minY = Math.min(...ys)
+      const maxX = Math.max(...xs)
+      const maxY = Math.max(...ys)
+      const pad = 0.006
+      const x = Math.max(0, minX - pad)
+      const y = Math.max(0, minY - pad)
+      const right = Math.min(1, maxX + pad)
+      const bottom = Math.min(1, maxY + pad)
+      return {
+        x,
+        y,
+        width: Math.max(right - x, 0.002),
+        height: Math.max(bottom - y, 0.002)
+      }
     }
     case 'line':
     case 'arrow': {
@@ -148,6 +161,46 @@ export function formatTime(iso: string): string {
   }
 }
 
+export function formatTimestamp(iso: string): string {
+  try {
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return iso
+    const now = new Date()
+    const sameDay = date.toDateString() === now.toDateString()
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: sameDay ? undefined : 'short',
+      month: sameDay ? undefined : 'short',
+      day: sameDay ? undefined : 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(date)
+  } catch {
+    return iso
+  }
+}
+
+export function localIsoDate(date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function shiftIsoDate(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return isoDate
+  date.setDate(date.getDate() + days)
+  return localIsoDate(date)
+}
+
+export function schoolDayWindow(dates: string[], selected: string, today: string, size = 7): string[] {
+  const unique = [...new Set([...dates, selected, today])].filter(Boolean).sort()
+  if (unique.length <= size) return unique
+  const index = Math.max(0, unique.indexOf(selected))
+  const start = Math.max(0, Math.min(index - Math.floor(size / 2), unique.length - size))
+  return unique.slice(start, start + size)
+}
+
 export function formatDate(isoDate: string): string {
   try {
     const date = new Date(`${isoDate}T00:00:00`)
@@ -158,5 +211,32 @@ export function formatDate(isoDate: string): string {
     }).format(date)
   } catch {
     return isoDate
+  }
+}
+
+export function formatShortDate(isoDate: string): string {
+  try {
+    const date = new Date(`${isoDate}T00:00:00`)
+    if (Number.isNaN(date.getTime())) return isoDate
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    }).format(date)
+  } catch {
+    return isoDate
+  }
+}
+
+export function formatDayChip(isoDate: string): { weekday: string; day: string } {
+  try {
+    const date = new Date(`${isoDate}T00:00:00`)
+    if (Number.isNaN(date.getTime())) return { weekday: isoDate, day: isoDate }
+    return {
+      weekday: new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date),
+      day: String(date.getDate())
+    }
+  } catch {
+    return { weekday: isoDate, day: isoDate }
   }
 }
