@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { Annotation, DocumentProject, Point, TextAnnotation } from '@shared/types'
+import { cssCursorForTool } from '../../cursors/toolCursors'
 import { renderNotePage, renderPdfPage } from '../../services/pdfRenderer'
 import { AnnotationLayer } from './AnnotationLayer'
 import { TextEditorOverlay } from './TextEditorOverlay'
@@ -74,7 +75,11 @@ export function PdfPage({ project, pdf, page, width, active, tool, priority = 1 
   if (!spec) return null
 
   return (
-    <article className={styles.page} style={{ width: size.width, height: size.height }} aria-label={`Page ${page}`}>
+    <article
+      className={styles.page}
+      style={{ width: size.width, height: size.height, cursor: cssCursorForTool(tool) }}
+      aria-label={`Page ${page}`}
+    >
       <canvas ref={canvasRef} className={`${styles.canvas} ${ready ? styles.canvasReady : ''}`} />
       {!ready && (
         <div className={styles.wait} aria-hidden="true">

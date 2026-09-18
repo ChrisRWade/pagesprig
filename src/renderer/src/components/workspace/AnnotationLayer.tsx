@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Arrow, Ellipse, Group, Layer, Line, Rect, Stage, Text as KonvaText } from 'react-konva'
 import {
   DEFAULT_HIGHLIGHT_WIDTH_PT,
@@ -18,6 +18,7 @@ import { annotationsForPage } from '@shared/serialize'
 import { simplifyStroke } from '@shared/simplify'
 import type { Annotation, DocumentProject, Point, Size, ToolId } from '@shared/types'
 import { annotationBounds, createId, hitTestAnnotation, moveAnnotation, nowIso } from '@shared/utils'
+import { cssCursorForTool } from '../../cursors/toolCursors'
 import { useDocumentStore } from '../../stores/documentStore'
 import { useAppStore } from '../../stores/appStore'
 
@@ -70,6 +71,7 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
   const hostRef = useRef<HTMLDivElement>(null)
   const [livePoints, setLivePoints] = useState<Point[]>([])
   const [preview, setPreview] = useState<Annotation | null>(null)
+  const [selectMode, setSelectMode] = useState<'idle' | 'over' | 'drag'>('idle')
   const dragRef = useRef<{ annotation: Annotation; origin: Point } | null>(null)
   const eraseRef = useRef<Set<string>>(new Set())
   const drawing = useRef(false)
@@ -82,6 +84,10 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
     window.addEventListener('pointerup', onUp)
     return () => window.removeEventListener('pointerup', onUp)
   }, [])
+
+  useEffect(() => {
+    setSelectMode('idle')
+  }, [tool])
 
   if (width <= 0 || height <= 0) return null
 
@@ -150,15 +156,26 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       return
     }
 
-    hostRef.current.setPointerCapture(event.pointerId)
-    drawing.current = true
-
     if (tool === 'select') {
       const hit = [...annotations].reverse().find((item) => hitTestAnnotation(item, point))
+      if (event.detail >= 2 && hit?.type === 'text') {
+        drawing.current = false
+        dragRef.current = null
+        setPreview(null)
+        setSelected(project.id, hit.id)
+        onStartText(point, hit, { x: hit.x, y: hit.y, width: hit.width, height: hit.height })
+        return
+      }
+      hostRef.current.setPointerCapture(event.pointerId)
+      drawing.current = true
       setSelected(project.id, hit?.id ?? null)
+      setSelectMode(hit ? 'drag' : 'idle')
       if (hit) dragRef.current = { annotation: hit, origin: point }
       return
     }
+
+    hostRef.current.setPointerCapture(event.pointerId)
+    drawing.current = true
 
     if (tool === 'eraser') {
       eraseRef.current = new Set()
@@ -189,8 +206,18 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
   }
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!hostRef.current || !drawing.current) return
+    if (!hostRef.current) return
     const point = toNormalized(event, hostRef.current)
+
+    if (tool === 'select' && !drawing.current) {
+      const hit = annotations.some((item) => hitTestAnnotation(item, point))
+      setSelectMode((mode) => {
+        const next = hit ? 'over' : 'idle'
+        return mode === next ? mode : next
+      })
+    }
+
+    if (!drawing.current) return
 
     if (tool === 'select' && dragRef.current) {
       const dx = point.x - dragRef.current.origin.x
@@ -230,6 +257,19 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
     }
   }
 
+  const onDoubleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (tool !== 'select' || !hostRef.current) return
+    const point = toNormalized(event, hostRef.current)
+    const hit = [...annotations].reverse().find((item) => hitTestAnnotation(item, point))
+    if (hit?.type !== 'text') return
+    drawing.current = false
+    dragRef.current = null
+    setPreview(null)
+    setSelectMode('idle')
+    setSelected(project.id, hit.id)
+    onStartText(point, hit, { x: hit.x, y: hit.y, width: hit.width, height: hit.height })
+  }
+
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!hostRef.current) return
     const point = toNormalized(event, hostRef.current)
@@ -267,6 +307,8 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
       }
       dragRef.current = null
       setPreview(null)
+      const stillOver = annotations.some((item) => hitTestAnnotation(item, point))
+      setSelectMode(stillOver ? 'over' : 'idle')
       return
     }
 
@@ -312,15 +354,27 @@ export function AnnotationLayer({ project, page, width, height, tool, editingTex
         inset: 0,
         touchAction: 'none',
         overflow: 'hidden',
-        pointerEvents: editingText ? 'none' : 'auto'
+        pointerEvents: editingText ? 'none' : 'auto',
+        cursor:
+          tool === 'select' && selectMode === 'drag'
+            ? 'grabbing'
+            : tool === 'select' && selectMode === 'over'
+              ? 'grab'
+              : cssCursorForTool(tool)
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerLeave={() => {
+        if (tool === 'select') setSelectMode((mode) => (mode === 'drag' ? mode : 'idle'))
+      }}
+      onDoubleClick={onDoubleClick}
     >
       <Stage width={width} height={height} listening={false}>
         <Layer listening={false} clipX={0} clipY={0} clipWidth={width} clipHeight={height}>
-          {shown.map((annotation) => (
+          {shown
+            .filter((annotation) => !(editingText && annotation.id === selectedId && annotation.type === 'text'))
+            .map((annotation) => (
             <DrawnAnnotation
               key={annotation.id}
               annotation={annotation}

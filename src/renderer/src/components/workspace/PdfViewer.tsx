@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { VIRTUALIZATION_BUFFER } from '@shared/constants'
 import type { DocumentProject, PageSpec } from '@shared/types'
 import { loadPdfDocument } from '../../services/pdfRenderer'
+import { cssCursorForTool } from '../../cursors/toolCursors'
 import { useAppStore } from '../../stores/appStore'
 import { PdfPage } from './PdfPage'
 import styles from './PdfViewer.module.css'
@@ -161,7 +162,14 @@ export function PdfViewer({ project }: Props) {
   )
 
   return (
-    <div className={styles.scroller} ref={scrollerRef} onWheel={onWheel} tabIndex={0} aria-label="Worksheet pages">
+    <div
+      className={styles.scroller}
+      ref={scrollerRef}
+      style={{ cursor: cssCursorForTool(tool) }}
+      onWheel={onWheel}
+      tabIndex={0}
+      aria-label="Worksheet pages"
+    >
       {placeholders.map((item) => {
         const active = item.page >= viewport.start && item.page <= viewport.end
         return (
