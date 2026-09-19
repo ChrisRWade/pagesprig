@@ -45,6 +45,7 @@ win-unpacked/
 /schoolwork/
 /tmp/
 .studypdf-index.json
+.pagesprig-index.json
 annotations.study.json
 
 # Python/tool caches if used for sample generation

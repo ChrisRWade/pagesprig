@@ -1,6 +1,6 @@
-import { readdir } from 'node:fs/promises'
+import { readdir, unlink } from 'node:fs/promises'
 import path from 'node:path'
-import { ANNOTATIONS_FILE, INDEX_FILE, RECOVERY_DIR } from '@shared/constants'
+import { ANNOTATIONS_FILE, INDEX_FILE, LEGACY_INDEX_FILE, RECOVERY_DIR } from '@shared/constants'
 import { toSummary } from '@shared/serialize'
 import type { DocumentProject, DocumentSummary } from '@shared/types'
 import { atomicWriteFile, readTextIfExists } from './atomic'
@@ -8,6 +8,10 @@ import { loadProjectFromDisk } from './projectIo'
 
 export function indexPath(storageRoot: string): string {
   return path.join(storageRoot, INDEX_FILE)
+}
+
+function legacyIndexPath(storageRoot: string): string {
+  return path.join(storageRoot, LEGACY_INDEX_FILE)
 }
 
 let indexLock: Promise<unknown> = Promise.resolve()
@@ -31,7 +35,8 @@ async function withIndexLock<T>(work: () => Promise<T>): Promise<T> {
 }
 
 export async function readIndex(storageRoot: string): Promise<DocumentSummary[]> {
-  const raw = await readTextIfExists(indexPath(storageRoot))
+  const raw =
+    (await readTextIfExists(indexPath(storageRoot))) ?? (await readTextIfExists(legacyIndexPath(storageRoot)))
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as { documents?: DocumentSummary[] }
@@ -43,6 +48,7 @@ export async function readIndex(storageRoot: string): Promise<DocumentSummary[]>
 
 export async function writeIndex(storageRoot: string, documents: DocumentSummary[]): Promise<void> {
   await atomicWriteFile(indexPath(storageRoot), `${JSON.stringify({ version: 1, documents }, null, 2)}\n`)
+  await unlink(legacyIndexPath(storageRoot)).catch(() => undefined)
 }
 
 export async function findProjectDirs(storageRoot: string): Promise<string[]> {

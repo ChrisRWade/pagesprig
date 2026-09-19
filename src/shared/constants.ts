@@ -1,5 +1,7 @@
-export const APP_NAME = 'StudyPDF'
+export const APP_NAME = 'PageSprig'
+export const APP_ID = 'org.pagesprig.app'
 export const APP_VERSION = '0.1.0'
+export const LEGACY_USER_DATA_NAMES = ['study-pdf', 'StudyPDF'] as const
 
 export const SETTINGS_VERSION = 1
 export const PROJECT_VERSION = 1
@@ -27,6 +29,8 @@ export const DEFAULT_PENCIL_WIDTH_PT = 1.6
 export const DEFAULT_HIGHLIGHT_WIDTH_PT = 14
 export const DEFAULT_SHAPE_WIDTH_PT = 2
 export const DEFAULT_TEXT_SIZE_PT = 16
+export const TEXT_FONT_STACK = 'Atkinson Hyperlegible, Segoe UI, sans-serif'
+export const TEXT_LINE_HEIGHT = 1.25
 
 export const PENCIL_COLOR = '#1A1612'
 export const HIGHLIGHT_COLOR = '#F5D76E'
@@ -97,7 +101,8 @@ export function markStrokeFactor(size: number): number {
 export const ANNOTATIONS_FILE = 'annotations.study.json'
 export const ORIGINAL_PDF_FILE = 'original.pdf'
 export const RECOVERY_DIR = '.recovery'
-export const INDEX_FILE = '.studypdf-index.json'
+export const INDEX_FILE = '.pagesprig-index.json'
+export const LEGACY_INDEX_FILE = '.studypdf-index.json'
 
 export const ERROR_CODES = {
   INVALID_PDF: 'INVALID_PDF',

@@ -1,5 +1,6 @@
 import { BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
+import { APP_NAME } from '@shared/constants'
 
 export function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -9,7 +10,8 @@ export function createMainWindow(): BrowserWindow {
     minHeight: 720,
     show: false,
     autoHideMenuBar: true,
-    title: 'StudyPDF',
+    title: APP_NAME,
+    icon: join(__dirname, '../../build/icon.ico'),
     backgroundColor: '#D9CDB8',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

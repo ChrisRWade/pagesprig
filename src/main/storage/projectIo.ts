@@ -1,6 +1,6 @@
 import { readdir, readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
-import { ANNOTATIONS_FILE, ERROR_CODES, ORIGINAL_PDF_FILE, PROJECT_VERSION, RECOVERY_CHECKPOINT_LIMIT, RECOVERY_DIR } from '@shared/constants'
+import { ANNOTATIONS_FILE, ERROR_CODES, ORIGINAL_PDF_FILE, PROJECT_VERSION, RECOVERY_CHECKPOINT_LIMIT, RECOVERY_DIR, APP_NAME } from '@shared/constants'
 import { fingerprintFromFile, parseDocumentProject, serializeProject } from '@shared/serialize'
 import type { DocumentProject } from '@shared/types'
 import { nowIso } from '@shared/utils'
@@ -28,7 +28,7 @@ export async function loadProjectFromDisk(
   }
   const project = parseDocumentProject(parsed)
   if (!project) {
-    throw new AppError('The saved notes file is not a valid StudyPDF document.', ERROR_CODES.VALIDATION)
+    throw new AppError(`The saved notes file is not a valid ${APP_NAME} document.`, ERROR_CODES.VALIDATION)
   }
   try {
     project.fingerprint = await fileFingerprint(annotationsFile(projectDir))

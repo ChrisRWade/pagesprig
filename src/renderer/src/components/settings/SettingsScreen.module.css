@@ -1,54 +1,179 @@
 .wrap {
-  padding: 32px 48px 80px;
-  max-width: 760px;
-  overflow: auto;
+  flex: 1;
   height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 20px 24px 24px;
+  overflow: hidden;
+}
+
+.sheet {
+  width: min(1120px, 100%);
+  max-height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 28px 16px 44px;
+  background:
+    linear-gradient(
+      to right,
+      transparent 28px,
+      color-mix(in srgb, #c45c4a 50%, transparent) 28px,
+      color-mix(in srgb, #c45c4a 50%, transparent) 29px,
+      transparent 29px
+    ),
+    var(--paper);
+  box-shadow: var(--shadow-paper);
+  animation: enterSheet var(--duration-ui) var(--ease);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  align-items: start;
+  gap: 16px;
+  flex-shrink: 0;
+  margin-bottom: 16px;
 }
 
-.wrap h2 {
-  font-size: 22px;
-  margin: 28px 0 8px;
+.kicker {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.help,
-.path {
+.header h1 {
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 0 32px;
+}
+
+.column {
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+}
+
+.column:last-child {
+  padding-left: 28px;
+  border-left: 1px solid var(--hairline);
+}
+
+.block {
+  margin-bottom: 28px;
+}
+
+.block:last-child {
+  margin-bottom: 8px;
+}
+
+.block h2,
+.studentsHead h2 {
+  font-size: 18px;
+  margin: 0 0 6px;
+}
+
+.aboutBrand {
+  margin: 0 0 10px;
+}
+
+.help {
+  margin: 0 0 10px;
   color: var(--graphite);
+  max-width: 54ch;
+}
+
+.folderRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .path {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--tray) 45%, var(--paper));
+  color: var(--graphite);
   font-family: ui-monospace, monospace;
-  background: var(--paper);
-  padding: 10px;
-  margin: 8px 0 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
-.wrap label {
-  display: block;
-  margin: 8px 0;
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.wrap input[type='text'],
-.wrap input:not([type]),
-.student input {
+.pair label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pair input,
+.studentRow input,
+.subjectRow input {
   width: 100%;
   min-height: 40px;
-  margin-top: 4px;
   border: 1px solid var(--hairline);
-  background: var(--paper);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--tray) 45%, var(--paper));
   padding: 0 10px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.studentsHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.studentsHead .help {
+  margin-bottom: 0;
+}
+
+.empty {
+  margin: 8px 0 0;
+  color: var(--muted);
 }
 
 .student {
   display: grid;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--paper) 88%, var(--tray));
 }
 
 .studentRow,
@@ -62,10 +187,55 @@
 .subjectRow input {
   flex: 1;
   width: auto;
+  margin: 0;
 }
 
-.check {
-  display: flex;
-  align-items: center;
+.subjects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
   gap: 8px;
+}
+
+.addSubject {
+  justify-self: start;
+}
+
+@keyframes enterSheet {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .sheet {
+    padding: 16px 16px 12px 36px;
+  }
+
+  .board {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .column {
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .column:last-child {
+    padding-left: 0;
+    border-left: none;
+    padding-top: 8px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .pair {
+    grid-template-columns: 1fr;
+  }
 }

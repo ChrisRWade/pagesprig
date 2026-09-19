@@ -58,7 +58,7 @@ describe('PDF export coordinates', () => {
 
 describe('PDF export', () => {
   it('writes a portable PDF without modifying the original bytes', async () => {
-    const dir = path.join(tmpdir(), `studypdf-export-${Date.now()}`)
+    const dir = path.join(tmpdir(), `pagesprig-export-${Date.now()}`)
     await mkdir(dir, { recursive: true })
     const originalPath = path.join(dir, ORIGINAL_PDF_FILE)
     const source = await PDFDocument.create()
@@ -78,6 +78,23 @@ describe('PDF export', () => {
     expect(exportedDoc.getPageCount()).toBe(1)
   })
 
+  it('stamps mixed-background type as a PNG so a letter can split colors', async () => {
+    const dir = path.join(tmpdir(), `pagesprig-export-raster-${Date.now()}`)
+    await mkdir(dir, { recursive: true })
+    const originalPath = path.join(dir, ORIGINAL_PDF_FILE)
+    const source = await PDFDocument.create()
+    source.addPage([612, 792])
+    const originalBytes = await source.save()
+    await writeFile(originalPath, originalBytes)
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const exportedPath = await exportAnnotatedPdf(project(dir, originalPath), [
+      { annotationId: 'text-1', pngBase64 }
+    ])
+    const exported = await readFile(exportedPath)
+    expect(exported.length).toBeGreaterThan(originalBytes.length)
+  })
+
   it('keeps check and x marks on the page instead of drawing them above it', () => {
     const spec = { width: 612, height: 792 }
     const mark = { x: 0.5, y: 0.4, size: 0.04 }
@@ -90,7 +107,7 @@ describe('PDF export', () => {
   })
 
   it('exports check marks and x marks onto the finished PDF', async () => {
-    const dir = path.join(tmpdir(), `studypdf-marks-${Date.now()}`)
+    const dir = path.join(tmpdir(), `pagesprig-marks-${Date.now()}`)
     await mkdir(dir, { recursive: true })
     const originalPath = path.join(dir, ORIGINAL_PDF_FILE)
     const source = await PDFDocument.create()

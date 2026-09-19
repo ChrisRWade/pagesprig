@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { SESSION_HEARTBEAT_MS } from '@shared/constants'
+import { findAnnotation } from '@shared/serialize'
 import { useAppStore } from '../stores/appStore'
 import { useDocumentStore } from '../stores/documentStore'
 import { saveNow } from '../services/autosave'
@@ -54,6 +55,17 @@ export function useKeyboard(): void {
       }
 
       if (typing) return
+
+      if ((event.key === 'Delete' || event.key === 'Backspace') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const doc = activeId ? docs.open[activeId] : null
+        const selectedId = doc?.selectedAnnotationId
+        if (!activeId || !doc || !selectedId) return
+        const annotation = findAnnotation(doc.project, selectedId)
+        if (!annotation) return
+        event.preventDefault()
+        docs.applyDeleteMany(activeId, [annotation])
+        return
+      }
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault()

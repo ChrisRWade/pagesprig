@@ -1,0 +1,60 @@
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lockup img {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.sm {
+  gap: 8px;
+}
+
+.sm img {
+  width: 28px;
+  height: 28px;
+}
+
+.md img {
+  width: 44px;
+  height: 44px;
+}
+
+.lg {
+  gap: 12px;
+}
+
+.lg img {
+  width: 56px;
+  height: 56px;
+}
+
+.word {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--brand-navy);
+  line-height: 1;
+}
+
+.sm .word {
+  font-size: 18px;
+}
+
+.md .word {
+  font-size: 28px;
+}
+
+.lg .word {
+  font-size: 34px;
+}
+
+.leaf {
+  color: var(--brand-leaf);
+}

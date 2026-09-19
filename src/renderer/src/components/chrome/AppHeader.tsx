@@ -1,8 +1,10 @@
 import { Button } from '../shared/Button'
 import { ExportStamp } from '../shared/ExportStamp'
+import { BrandLockup } from './Brand'
 import { useAppStore } from '../../stores/appStore'
 import { useDocumentStore } from '../../stores/documentStore'
 import { refreshDocuments } from '../../services/documents'
+import { APP_NAME } from '@shared/constants'
 import styles from './AppHeader.module.css'
 
 export function AppHeader() {
@@ -43,6 +45,7 @@ export function AppHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
+        <BrandLockup size="sm" wordmark={false} />
         <label className={styles.student}>
           <span className="visually-hidden">Student</span>
           <select
@@ -75,7 +78,7 @@ export function AppHeader() {
             <span
               className={saveStatus === 'error' ? styles.marksBad : styles.marks}
               aria-live="polite"
-              title="StudyPDF keeps your marks automatically while you work."
+              title={`${APP_NAME} keeps your marks automatically while you work.`}
             >
               {saveStatus === 'saving'
                 ? 'Saving marks…'

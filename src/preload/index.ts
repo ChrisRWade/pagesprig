@@ -4,6 +4,7 @@ import type {
   AddNotePageRequest,
   ExportRequest,
   ImportRequest,
+  RemoveNotePageRequest,
   SaveProjectRequest,
   StudyApi
 } from '@shared/ipc'
@@ -20,6 +21,7 @@ const api: StudyApi = {
   listDocuments: () => ipcRenderer.invoke(IPC_CHANNELS.listDocuments),
   readPdf: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.readPdf, filePath),
   addNotePage: (request: AddNotePageRequest) => ipcRenderer.invoke(IPC_CHANNELS.addNotePage, request),
+  removeNotePage: (request: RemoveNotePageRequest) => ipcRenderer.invoke(IPC_CHANNELS.removeNotePage, request),
   writeCheckpoint: (project: DocumentProject) => ipcRenderer.invoke(IPC_CHANNELS.writeCheckpoint, project),
   loadCheckpoint: (projectDir: string) => ipcRenderer.invoke(IPC_CHANNELS.loadCheckpoint, projectDir),
   getSession: () => ipcRenderer.invoke(IPC_CHANNELS.getSession),

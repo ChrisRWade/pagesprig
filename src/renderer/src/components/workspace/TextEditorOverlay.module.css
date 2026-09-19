@@ -4,14 +4,32 @@
   box-sizing: border-box;
   margin: 0;
   border: 1px solid #1f4e79;
-  background: rgba(255, 254, 248, 0.96);
+  background-color: transparent;
   padding: 2px 4px;
   resize: both;
   overflow: auto;
+  font-family: var(--font-ui);
   line-height: 1.25;
   color: var(--ink);
   pointer-events: auto;
   cursor: text;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
   box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.16);
+}
+
+.adaptive {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-origin: padding-box;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.editor::selection {
+  color: inherit;
+  background: rgba(31, 78, 121, 0.28);
 }

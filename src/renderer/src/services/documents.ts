@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
-import { mergeDocumentCatalog } from '@shared/serialize'
+import { mergeDocumentCatalog, annotationsForPage } from '@shared/serialize'
+import { isNotePageSource } from '@shared/notePages'
 import { forgetPdf, loadPdfDocument } from './pdfRenderer'
 import { saveNow } from './autosave'
 import { useAppStore } from '../stores/appStore'
 import { useDocumentStore } from '../stores/documentStore'
-import type { DocumentProject, DocumentSummary } from '@shared/types'
+import type { DocumentProject, DocumentSummary, PageSource } from '@shared/types'
 
 export function useCatalogDocuments(): DocumentSummary[] {
   const listed = useAppStore((state) => state.documents)
@@ -77,4 +78,35 @@ export async function removeDocument(projectDir: string, documentId?: string): P
     useDocumentStore.getState().closeDocument(documentId)
   }
   await refreshDocuments()
+}
+
+export async function addNotesPage(project: DocumentProject, source: PageSource): Promise<boolean> {
+  const result = await window.studyApi.addNotePage({ project, source })
+  if (!result.ok) {
+    useAppStore.getState().setError(result.error)
+    return false
+  }
+  useDocumentStore.getState().patchProject(project.id, result.data, false)
+  useAppStore.getState().requestPage(result.data.pages.length)
+  return true
+}
+
+export async function removeNotesPage(project: DocumentProject, pageNumber: number): Promise<boolean> {
+  const spec = project.pages.find((item) => item.page === pageNumber)
+  if (!spec || !isNotePageSource(spec.source)) return false
+  const marked = annotationsForPage(project, pageNumber).length > 0
+  const ok = window.confirm(
+    marked
+      ? `Remove notes page ${pageNumber}? The writing on it will be deleted.`
+      : `Remove notes page ${pageNumber}?`
+  )
+  if (!ok) return false
+  const result = await window.studyApi.removeNotePage({ project, page: pageNumber })
+  if (!result.ok) {
+    useAppStore.getState().setError(result.error)
+    return false
+  }
+  useDocumentStore.getState().patchProject(project.id, result.data, false)
+  useAppStore.getState().requestPage(Math.min(pageNumber, result.data.pages.length))
+  return true
 }

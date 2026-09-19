@@ -11,6 +11,7 @@ import {
   type RecentStatusFilter
 } from '@shared/recentFilter'
 import type { DocumentSummary } from '@shared/types'
+import { APP_NAME } from '@shared/constants'
 import { formatDate, formatShortDate, localIsoDate } from '@shared/utils'
 import { Button } from '../shared/Button'
 import { ExportStamp } from '../shared/ExportStamp'
@@ -18,26 +19,33 @@ import { openSummary, removeDocument, refreshDocuments, useCatalogDocuments } fr
 import { useAppStore } from '../../stores/appStore'
 import styles from './RecentDocuments.module.css'
 
-const STATUS_CHIPS: { id: RecentStatusFilter; label: string }[] = [
+const STATUS_OPTIONS: { id: RecentStatusFilter; label: string }[] = [
   { id: 'all', label: 'Any status' },
   { id: 'not_started', label: 'Not started' },
   { id: 'in_progress', label: 'In progress' },
   { id: 'completed', label: 'Completed' }
 ]
 
-const PDF_CHIPS: { id: RecentPdfFilter; label: string }[] = [
+const PDF_OPTIONS: { id: RecentPdfFilter; label: string }[] = [
   { id: 'all', label: 'Any PDF' },
   { id: 'missing', label: 'Not saved' },
   { id: 'stale', label: 'Needs saving' },
   { id: 'current', label: 'PDF saved' }
 ]
 
-const RANGE_CHIPS: { id: RecentRange; label: string }[] = [
+const RANGE_OPTIONS: { id: RecentRange; label: string }[] = [
   { id: 'all', label: 'All days' },
   { id: 'today', label: 'Today' },
   { id: 'week', label: 'Last 7 days' },
   { id: 'month', label: 'Last 30 days' },
   { id: 'custom', label: 'Choose dates' }
+]
+
+const SORT_OPTIONS: { id: RecentSort; label: string }[] = [
+  { id: 'day', label: 'By school day' },
+  { id: 'opened', label: 'Last opened' },
+  { id: 'edited', label: 'Last edited' },
+  { id: 'title', label: 'Name' }
 ]
 
 export function RecentDocuments() {
@@ -99,178 +107,162 @@ export function RecentDocuments() {
           </Button>
         </header>
 
-        <label className={styles.search}>
-          <span className="visually-hidden">Search worksheets</span>
-          <input
-            value={filter.query}
-            placeholder="Search title, file name, student, or subject"
-            aria-label="Search worksheets"
-            onChange={(event) => patch({ query: event.target.value })}
-          />
-        </label>
+        <div className={styles.toolbar}>
+          <label className={styles.search}>
+            <span className="visually-hidden">Search worksheets</span>
+            <input
+              value={filter.query}
+              placeholder="Search title, file name, student, or subject"
+              aria-label="Search worksheets"
+              onChange={(event) => patch({ query: event.target.value })}
+            />
+          </label>
 
-        <div className={styles.controls}>
-          <label>
-            Student
-            <select
-              aria-label="Student"
+          <div className={styles.filters}>
+            <FilterSelect
+              label="Student"
               value={filter.studentId}
-              onChange={(event) => chooseStudent(event.target.value)}
-            >
-              <option value="">All students</option>
-              {settings.students.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Subject
-            <select
-              aria-label="Subject"
+              onChange={chooseStudent}
+              options={[{ id: '', label: 'All students' }, ...settings.students.map((item) => ({ id: item.id, label: item.name }))]}
+            />
+            <FilterSelect
+              label="Subject"
               value={filter.subjectId}
-              onChange={(event) => patch({ subjectId: event.target.value })}
-            >
-              <option value="">All subjects</option>
-              {subjectOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Sort
-            <select
-              aria-label="Sort worksheets"
+              onChange={(subjectId) => patch({ subjectId })}
+              options={[{ id: '', label: 'All subjects' }, ...subjectOptions]}
+            />
+            <FilterSelect
+              label="Days"
+              value={filter.range}
+              onChange={(range) => patch({ range: range as RecentRange })}
+              options={RANGE_OPTIONS}
+            />
+            <FilterSelect
+              label="Status"
+              value={filter.status}
+              onChange={(status) => patch({ status: status as RecentStatusFilter })}
+              options={STATUS_OPTIONS}
+            />
+            <FilterSelect
+              label="Finished PDF"
+              value={filter.pdf}
+              onChange={(pdf) => patch({ pdf: pdf as RecentPdfFilter })}
+              options={PDF_OPTIONS}
+            />
+            <FilterSelect
+              label="Sort"
               value={filter.sort}
-              onChange={(event) => patch({ sort: event.target.value as RecentSort })}
-            >
-              <option value="day">By school day</option>
-              <option value="opened">Last opened</option>
-              <option value="edited">Last edited</option>
-              <option value="title">Name</option>
-            </select>
-          </label>
+              onChange={(sort) => patch({ sort: sort as RecentSort })}
+              options={SORT_OPTIONS}
+            />
+          </div>
+
+          {filter.range === 'custom' && (
+            <div className={styles.dates}>
+              <label>
+                From
+                <input
+                  type="date"
+                  value={filter.fromDate}
+                  onChange={(event) => patch({ fromDate: event.target.value })}
+                />
+              </label>
+              <label>
+                To
+                <input type="date" value={filter.toDate} onChange={(event) => patch({ toDate: event.target.value })} />
+              </label>
+            </div>
+          )}
+
+          <div className={styles.summary}>
+            <p>
+              {filtered.length === 1 ? '1 worksheet' : `${filtered.length} worksheets`}
+              {active ? ' match' : ''}
+            </p>
+            {active && (
+              <Button
+                variant="ghost"
+                className={styles.clear}
+                onClick={() => setFilter({ ...DEFAULT_RECENT_FILTER, studentId: settings.selectedStudentId ?? '' })}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
         </div>
 
-        <fieldset className={styles.chips}>
-          <legend>Days</legend>
-          {RANGE_CHIPS.map((item) => (
-            <Chip
-              key={item.id}
-              label={item.label}
-              pressed={filter.range === item.id}
-              onClick={() => patch({ range: item.id })}
-            />
-          ))}
-        </fieldset>
-        {filter.range === 'custom' && (
-          <div className={styles.dates}>
-            <label>
-              From
-              <input type="date" value={filter.fromDate} onChange={(event) => patch({ fromDate: event.target.value })} />
-            </label>
-            <label>
-              To
-              <input type="date" value={filter.toDate} onChange={(event) => patch({ toDate: event.target.value })} />
-            </label>
-          </div>
-        )}
-
-        <fieldset className={styles.chips}>
-          <legend>Status</legend>
-          {STATUS_CHIPS.map((item) => (
-            <Chip
-              key={item.id}
-              label={item.label}
-              pressed={filter.status === item.id}
-              onClick={() => patch({ status: item.id })}
-            />
-          ))}
-        </fieldset>
-
-        <fieldset className={styles.chips}>
-          <legend>Finished PDF</legend>
-          {PDF_CHIPS.map((item) => (
-            <Chip
-              key={item.id}
-              label={item.label}
-              pressed={filter.pdf === item.id}
-              onClick={() => patch({ pdf: item.id })}
-            />
-          ))}
-        </fieldset>
-
-        <div className={styles.summary}>
-          <p>
-            {filtered.length === 1 ? '1 worksheet' : `${filtered.length} worksheets`}
-            {active ? ' match' : ''}
-          </p>
-          {active && (
-            <Button
-              variant="ghost"
-              onClick={() => setFilter({ ...DEFAULT_RECENT_FILTER, studentId: settings.selectedStudentId ?? '' })}
-            >
-              Clear filters
-            </Button>
+        <div className={styles.results}>
+          {filtered.length === 0 ? (
+            <p className={styles.empty}>
+              {documents.length === 0
+                ? 'No worksheets saved yet.'
+                : 'Nothing matches. Try a different day, subject, or clear the filters.'}
+            </p>
+          ) : groupByDay ? (
+            grouped.map((group) => (
+              <section key={group.date} className={styles.group}>
+                <h2>{group.date === today ? `Today · ${formatDate(group.date)}` : formatDate(group.date)}</h2>
+                <ul>
+                  {group.items.map((item) => (
+                    <WorkRow
+                      key={item.id}
+                      item={item}
+                      names={namesFor(item)}
+                      showStudent={showStudent}
+                      onOpen={() => {
+                        void openSummary(item)
+                        closeOverlay()
+                      }}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))
+          ) : (
+            <ul className={styles.list}>
+              {filtered.map((item) => (
+                <WorkRow
+                  key={item.id}
+                  item={item}
+                  names={namesFor(item)}
+                  showStudent={showStudent}
+                  showDate
+                  onOpen={() => {
+                    void openSummary(item)
+                    closeOverlay()
+                  }}
+                />
+              ))}
+            </ul>
           )}
         </div>
-
-        {filtered.length === 0 ? (
-          <p className={styles.empty}>
-            {documents.length === 0
-              ? 'No worksheets saved yet.'
-              : 'Nothing matches. Try a different day, subject, or clear the filters.'}
-          </p>
-        ) : groupByDay ? (
-          grouped.map((group) => (
-            <section key={group.date} className={styles.group}>
-              <h2>{group.date === today ? `Today · ${formatDate(group.date)}` : formatDate(group.date)}</h2>
-              <ul>
-                {group.items.map((item) => (
-                  <WorkRow
-                    key={item.id}
-                    item={item}
-                    names={namesFor(item)}
-                    showStudent={showStudent}
-                    onOpen={() => {
-                      void openSummary(item)
-                      closeOverlay()
-                    }}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))
-        ) : (
-          <ul className={styles.list}>
-            {filtered.map((item) => (
-              <WorkRow
-                key={item.id}
-                item={item}
-                names={namesFor(item)}
-                showStudent={showStudent}
-                showDate
-                onOpen={() => {
-                  void openSummary(item)
-                  closeOverlay()
-                }}
-              />
-            ))}
-          </ul>
-        )}
       </div>
     </main>
   )
 }
 
-function Chip({ label, pressed, onClick }: { label: string; pressed: boolean; onClick: () => void }) {
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: { id: string; label: string }[]
+}) {
   return (
-    <button type="button" className={pressed ? styles.chipOn : styles.chip} aria-pressed={pressed} onClick={onClick}>
+    <label>
       {label}
-    </button>
+      <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((item) => (
+          <option key={`${label}:${item.id}`} value={item.id}>
+            {item.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -308,7 +300,7 @@ function WorkRow({
         onClick={() => {
           if (
             window.confirm(
-              `Remove "${item.title}" from StudyPDF? The copy in the schoolwork folder is deleted. The original file you dropped is not changed.`
+              `Remove "${item.title}" from ${APP_NAME}? The copy in the schoolwork folder is deleted. The original file you dropped is not changed.`
             )
           ) {
             void removeDocument(item.projectDir, item.id)

@@ -6,7 +6,7 @@ import { atomicWriteFile, readTextIfExists } from './atomic'
 
 describe('atomic writes', () => {
   it('replaces the destination file without leaving a partial document', async () => {
-    const dir = path.join(tmpdir(), `studypdf-atomic-${Date.now()}`)
+    const dir = path.join(tmpdir(), `pagesprig-atomic-${Date.now()}`)
     await mkdir(dir, { recursive: true })
     const file = path.join(dir, 'annotations.study.json')
     await atomicWriteFile(file, '{"ok":1}')

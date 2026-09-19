@@ -1,5 +1,6 @@
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
+import { APP_NAME } from '@shared/constants'
 import { pdfProtocolUrl, toPdfBytes } from '@shared/pdfProtocol'
 import type { PageSource } from '@shared/types'
 import PdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker'
@@ -26,25 +27,25 @@ function describePdfError(error: unknown): string {
   const name = error && typeof error === 'object' && 'name' in error ? String((error as { name: unknown }).name) : ''
   const message = error instanceof Error ? error.message : String(error ?? '')
   if (/password|encrypt/i.test(message) || name === 'PasswordException') {
-    return 'This PDF is password protected. Unlock it before adding it to StudyPDF.'
+    return `This PDF is password protected. Unlock it before adding it to ${APP_NAME}.`
   }
   if (/worker/i.test(message)) {
-    return 'StudyPDF could not start the PDF reader. Restart the app and try again.'
+    return `${APP_NAME} could not start the PDF reader. Restart the app and try again.`
   }
   if (name === 'MissingPDFException' || /missing pdf/i.test(message)) {
-    return 'StudyPDF could not find that worksheet in the schoolwork folder.'
+    return `${APP_NAME} could not find that worksheet in the schoolwork folder.`
   }
   if (
     name === 'UnexpectedResponseException' ||
     /network|fetch|403|404|failed to fetch/i.test(message)
   ) {
-    return 'StudyPDF could not read that worksheet from the schoolwork folder.'
+    return `${APP_NAME} could not read that worksheet from the schoolwork folder.`
   }
   if (name === 'InvalidPDFException' || /invalid pdf/i.test(message)) {
     return 'That file is not a readable PDF worksheet.'
   }
   if (/toHex is not a function/i.test(message)) {
-    return 'StudyPDF could not read that worksheet. Restart the app and try again.'
+    return `${APP_NAME} could not read that worksheet. Restart the app and try again.`
   }
   const detail = message.replace(/^Error:\s*/i, '').trim()
   if (detail && detail.length < 180 && !/undefined|null|\[object/i.test(detail)) {
@@ -85,6 +86,10 @@ export async function loadPdfDocument(id: string, filePath: string): Promise<PDF
   } catch (error) {
     throw new Error(describePdfError(error))
   }
+}
+
+export function getLoadedPdf(id: string): PDFDocumentProxy | undefined {
+  return cache.get(id)
 }
 
 export function forgetPdf(id: string): void {

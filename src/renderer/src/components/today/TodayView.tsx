@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DocumentSummary, Student } from '@shared/types'
+import { APP_NAME } from '@shared/constants'
 import { formatDate, formatDayChip, formatShortDate, localIsoDate, schoolDayWindow } from '@shared/utils'
 import { Button } from '../shared/Button'
 import { ExportStamp } from '../shared/ExportStamp'
@@ -163,7 +164,7 @@ export function TodayView({ student, subjectId, documents }: Props) {
                       onClick={() => {
                         if (
                           window.confirm(
-                            `Remove "${item.title}" from StudyPDF? The copy in the schoolwork folder is deleted. The original file you dropped is not changed.`
+                            `Remove "${item.title}" from ${APP_NAME}? The copy in the schoolwork folder is deleted. The original file you dropped is not changed.`
                           )
                         ) {
                           void removeDocument(item.projectDir, item.id)

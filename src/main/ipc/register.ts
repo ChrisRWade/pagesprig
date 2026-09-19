@@ -1,7 +1,7 @@
 import { dialog, ipcMain, shell } from 'electron'
-import { APP_VERSION, ERROR_CODES } from '@shared/constants'
+import { APP_NAME, APP_VERSION, ERROR_CODES } from '@shared/constants'
 import { IPC_CHANNELS } from '@shared/ipc'
-import type { AddNotePageRequest, ExportRequest, ImportRequest, SaveProjectRequest } from '@shared/ipc'
+import type { AddNotePageRequest, ExportRequest, ImportRequest, RemoveNotePageRequest, SaveProjectRequest } from '@shared/ipc'
 import type { AppSettings, DocumentProject, SessionState } from '@shared/types'
 import { AppError, err, fromFilesystemError, ok } from '../storage/errors'
 import {
@@ -13,6 +13,7 @@ import {
   loadLatestCheckpoint,
   loadProjectFromDisk,
   readPdfBytes,
+  removeNotePage,
   saveProjectToDisk,
   selectStorageDirectory,
   writeCheckpoint
@@ -103,12 +104,12 @@ export function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.exportPdf, async (_event, request: ExportRequest) => {
     try {
       if (!request?.project) return err('Nothing to export.', ERROR_CODES.VALIDATION)
-      return ok(await exportProjectPdf(request.project))
+      return ok(await exportProjectPdf(request.project, request.textRasters))
     } catch (error) {
       if (error instanceof AppError) return err(error.message, error.code)
       return fromFilesystemError(
         error,
-        'Could not update the finished PDF. Your marks are still saved in StudyPDF.'
+        `Could not update the finished PDF. Your marks are still saved in ${APP_NAME}.`
       )
     }
   })
@@ -139,6 +140,18 @@ export function registerIpc(): void {
     } catch (error) {
       if (error instanceof AppError) return err(error.message, error.code)
       return fromFilesystemError(error, 'Could not add a notes page.')
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.removeNotePage, async (_event, request: RemoveNotePageRequest) => {
+    try {
+      if (!request?.project || !Number.isFinite(request.page)) {
+        return err('Could not remove that notes page.', ERROR_CODES.VALIDATION)
+      }
+      return ok(await removeNotePage(request.project, request.page))
+    } catch (error) {
+      if (error instanceof AppError) return err(error.message, error.code)
+      return fromFilesystemError(error, 'Could not remove that notes page.')
     }
   })
 

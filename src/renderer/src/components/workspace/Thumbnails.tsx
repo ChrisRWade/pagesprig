@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { isNotePageSource } from '@shared/notePages'
 import type { DocumentProject, PageSpec } from '@shared/types'
 import { loadPdfDocument, renderNotePage, renderPdfPage } from '../../services/pdfRenderer'
+import { removeNotesPage } from '../../services/documents'
 import { useAppStore } from '../../stores/appStore'
 import styles from './Thumbnails.module.css'
 
@@ -20,7 +22,7 @@ export function Thumbnails({ project, open }: Props) {
     >
       {project.pages.map((page) => (
         <Thumb
-          key={page.page}
+          key={`${page.page}-${page.source}`}
           project={project}
           page={page}
           current={page.page === currentPage}
@@ -49,6 +51,7 @@ function Thumb({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const width = 52
   const height = width * (page.height / page.width)
+  const notes = isNotePageSource(page.source)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -85,14 +88,31 @@ function Thumb({
   }, [reveal])
 
   return (
-    <button
-      ref={buttonRef}
-      className={current ? `${styles.thumb} ${styles.thumbOn}` : styles.thumb}
-      aria-current={current ? 'page' : undefined}
-      onClick={() => useAppStore.getState().requestPage(page.page)}
-    >
-      <canvas ref={canvasRef} className={styles.sheet} aria-hidden="true" />
-      {page.page}
-    </button>
+    <div className={current ? `${styles.thumbWrap} ${styles.thumbWrapOn}` : styles.thumbWrap}>
+      <button
+        ref={buttonRef}
+        className={current ? `${styles.thumb} ${styles.thumbOn}` : styles.thumb}
+        aria-current={current ? 'page' : undefined}
+        onClick={() => useAppStore.getState().requestPage(page.page)}
+      >
+        <canvas ref={canvasRef} className={styles.sheet} aria-hidden="true" />
+        {page.page}
+      </button>
+      {notes && (
+        <button
+          type="button"
+          className={styles.remove}
+          aria-label={`Remove notes page ${page.page}`}
+          title="Remove notes page"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            void removeNotesPage(project, page.page)
+          }}
+        >
+          ×
+        </button>
+      )}
+    </div>
   )
 }

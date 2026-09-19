@@ -1,8 +1,12 @@
-# StudyPDF
+<p align="center">
+  <img src="src/renderer/src/assets/pagesprig-logo.svg" alt="PageSprig" width="420" />
+</p>
 
-StudyPDF is a Windows desktop notebook for school worksheets.
+# PageSprig
 
-Homeschool platforms such as Miacademy and MiaPrep send a lot of printable PDFs. Instead of printing every page, a child can drop a worksheet into StudyPDF and write, type, highlight, and draw on it. The original PDF is never changed. Notes are stored beside it and can be exported as a normal PDF.
+PageSprig is a Windows desktop notebook for school worksheets.
+
+Homeschool platforms such as Miacademy and MiaPrep send a lot of printable PDFs. Instead of printing every page, a child can drop a worksheet into PageSprig and write, type, highlight, and draw on it. The original PDF is never changed. Notes are stored beside it and can be exported as a normal PDF.
 
 This is not Adobe Acrobat. It is a simple schoolwork workspace that happens to use PDFs as page backgrounds.
 
@@ -18,7 +22,7 @@ Children should be able to:
 6. Close the app without thinking about Save
 7. Find the work later, still there
 
-StudyPDF is built around that loop.
+PageSprig is built around that loop.
 
 ## Features
 
@@ -35,7 +39,7 @@ StudyPDF is built around that loop.
 
 ## Privacy
 
-StudyPDF has no cloud backend and does not upload children's schoolwork anywhere on its own.
+PageSprig has no cloud backend and does not upload children's schoolwork anywhere on its own.
 
 There are no accounts, analytics, ads, telemetry, or crash-report uploads.
 
@@ -52,7 +56,7 @@ During setup, choose any normal folder as the schoolwork root. That can be:
 - Syncthing
 - a NAS or network drive
 
-StudyPDF only sees a filesystem path. It does not need Google API credentials, OAuth, or vendor-specific storage code.
+PageSprig only sees a filesystem path. It does not need Google API credentials, OAuth, or vendor-specific storage code.
 
 Default layout:
 
@@ -75,11 +79,11 @@ School/
 
 Unsigned Windows builds may trigger a SmartScreen warning.
 
-Download the installer or portable executable from [Releases](https://github.com/ChrisRWade/study-pdf/releases), or build from source:
+Download the installer or portable executable from [Releases](https://github.com/ChrisRWade/pagesprig/releases), or build from source:
 
 ```bash
-git clone https://github.com/ChrisRWade/study-pdf.git
-cd study-pdf
+git clone https://github.com/ChrisRWade/pagesprig.git
+cd pagesprig
 npm install
 npm run generate:samples
 npm run package

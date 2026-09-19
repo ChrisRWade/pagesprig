@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultSettings, parseSettings, settingsNeedSetup } from './settingsSchema'
+import { defaultSettings, parseSettings, settingsNeedSetup, shouldAdoptLegacySettings, shouldKeepExistingSettings } from './settingsSchema'
 
 describe('settings schema', () => {
   it('returns defaults for empty input', () => {
@@ -26,6 +26,26 @@ describe('settings schema', () => {
     expect(settings.students[0].avatar).toBe('📘')
     expect(settings.students[0].subjects[0].color).toBeTruthy()
     expect(settingsNeedSetup(settings)).toBe(false)
+  })
+
+  it('adopts a finished StudyPDF profile when PageSprig settings are still empty', () => {
+    const current = parseSettings({
+      version: 1,
+      storageRoot: 'G:/My Drive/Chris Files',
+      students: [{ id: 'new', name: '', subjects: [] }],
+      setupComplete: false
+    })
+    const legacy = parseSettings({
+      version: 1,
+      storageRoot: 'G:/My Drive/Chris Files',
+      students: [{ id: 'chris', name: 'Chris', subjects: [{ id: 'math', name: 'Math' }] }],
+      selectedStudentId: 'chris',
+      setupComplete: true
+    })
+    expect(shouldAdoptLegacySettings(current, legacy)).toBe(true)
+    expect(shouldAdoptLegacySettings(legacy, current)).toBe(false)
+    expect(shouldKeepExistingSettings(legacy, current)).toBe(true)
+    expect(shouldKeepExistingSettings(legacy, { ...legacy, setupComplete: true })).toBe(false)
   })
 
   it('does not load a newer incompatible settings version', () => {

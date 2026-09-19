@@ -1,6 +1,6 @@
-appId: org.studypdf.app
-productName: StudyPDF
-copyright: Copyright © StudyPDF contributors
+appId: org.pagesprig.app
+productName: PageSprig
+copyright: Copyright © PageSprig contributors
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 directories:
   output: release
@@ -17,6 +17,7 @@ extraResources:
     filter:
       - '*.pdf'
 win:
+  icon: icon.ico
   target:
     - nsis
     - portable
@@ -28,13 +29,13 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: StudyPDF
-  uninstallDisplayName: StudyPDF
+  shortcutName: PageSprig
+  uninstallDisplayName: PageSprig
 portable:
   artifactName: ${productName}-${version}-${os}-${arch}-portable.${ext}
 publish:
   provider: github
   owner: ChrisRWade
-  repo: study-pdf
+  repo: pagesprig
   releaseType: release
 electronVersion: 37.4.0

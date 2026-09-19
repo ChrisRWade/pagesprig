@@ -11,6 +11,6 @@ body:
   - type: textarea
     id: idea
     attributes:
-      label: What would you like StudyPDF to do?
+      label: What would you like PageSprig to do?
     validations:
       required: true

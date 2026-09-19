@@ -1,14 +1,22 @@
 .wrap {
+  flex: 1;
   height: 100%;
-  overflow: auto;
+  min-height: 0;
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
-  padding: 32px 24px 72px;
+  align-items: stretch;
+  padding: 20px 24px 24px;
+  overflow: hidden;
 }
 
 .sheet {
   width: min(880px, 100%);
-  padding: 28px 36px 40px 48px;
+  max-height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 28px 16px 44px;
   background:
     linear-gradient(
       to right,
@@ -27,106 +35,69 @@
   justify-content: space-between;
   align-items: start;
   gap: 16px;
-  margin-bottom: 22px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 
 .kicker {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .header h1 {
-  font-size: 34px;
+  font-size: 26px;
   line-height: 1.15;
+}
+
+.toolbar {
+  flex-shrink: 0;
+  display: grid;
+  gap: 10px;
+  padding-bottom: 8px;
 }
 
 .search {
   display: block;
-  margin-bottom: 16px;
 }
 
 .search input,
-.controls select,
+.filters select,
 .dates input {
   width: 100%;
-  min-height: 44px;
+  min-height: 36px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--tray) 45%, var(--paper));
-  padding: 0 12px;
+  padding: 0 10px;
 }
 
-.controls {
+.search input {
+  min-height: 40px;
+}
+
+.filters,
+.dates {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 8px 10px;
 }
 
-.controls label,
+.filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.filters label,
 .dates label {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 12px;
-  padding: 0;
-  border: none;
-}
-
-.chips legend {
-  padding: 0;
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.chip,
-.chipOn {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--tray) 70%, var(--paper));
-  color: var(--graphite);
-  transition:
-    background-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease),
-    transform 100ms var(--ease);
-}
-
-.chip:hover,
-.chipOn {
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.chipOn {
-  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
-  font-weight: 700;
-}
-
-.chip:active,
-.chipOn:active {
-  transform: scale(0.97);
 }
 
 .dates {
-  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 0 0 16px;
 }
 
 .summary {
@@ -134,21 +105,46 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 10px 0 18px;
+  min-height: 28px;
   color: var(--muted);
+  font-size: 13px;
 }
 
 .summary p {
   margin: 0;
 }
 
+.clear {
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.results {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px 4px 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
 .group {
-  margin-bottom: 28px;
+  margin-bottom: 16px;
+}
+
+.group:last-child {
+  margin-bottom: 0;
 }
 
 .group h2 {
-  font-size: 18px;
-  margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 15px;
+  padding: 8px 0 8px;
+  background: var(--paper);
 }
 
 .list,
@@ -169,7 +165,7 @@
 
 .row {
   width: 100%;
-  min-height: 64px;
+  min-height: 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -211,7 +207,9 @@
 }
 
 .empty {
-  margin: 8px 0 0;
+  margin: auto;
+  padding: 48px 16px;
+  text-align: center;
   color: var(--muted);
 }
 
@@ -243,15 +241,15 @@
 
 @media (max-width: 720px) {
   .sheet {
-    padding: 24px 20px 32px 36px;
+    padding: 16px 16px 12px 36px;
   }
 
-  .controls,
+  .filters,
   .dates {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .header h1 {
-    font-size: 28px;
+    font-size: 24px;
   }
 }

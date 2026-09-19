@@ -1,4 +1,5 @@
 import { useAppStore } from '../../stores/appStore'
+import { BrandLockup } from './Brand'
 import styles from './StudentPicker.module.css'
 
 export function StudentPicker() {
@@ -23,7 +24,7 @@ export function StudentPicker() {
 
   return (
     <main className={styles.wrap}>
-      <p className={styles.kicker}>StudyPDF</p>
+      <BrandLockup size="lg" />
       <h1>Who is working?</h1>
       {students.length === 0 && (
         <p className={styles.empty}>No students yet. Open Settings to add the first child.</p>

@@ -1,8 +1,9 @@
 import { copyFile, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { PDFDocument, PDFPage, rgb, StandardFonts, type RGB } from 'pdf-lib'
-import { ERROR_CODES, ORIGINAL_PDF_FILE, markStrokeFactor } from '@shared/constants'
+import { ERROR_CODES, ORIGINAL_PDF_FILE, APP_NAME, markStrokeFactor } from '@shared/constants'
 import { normalizedToPdf, normalizedBoxToPdf } from '@shared/coords'
+import type { TextRaster } from '@shared/ipc'
 import type { Annotation, DocumentProject, PageSpec, Point } from '@shared/types'
 import { AppError } from '../storage/errors'
 import { atomicWriteFile } from '../storage/atomic'
@@ -80,10 +81,12 @@ function svgPath(points: Point[], spec: PageSpec): string {
 }
 
 async function drawAnnotation(
+  pdfDoc: PDFDocument,
   pdfPage: PDFPage,
   spec: PageSpec,
   annotation: Annotation,
-  font: Awaited<ReturnType<PDFDocument['embedFont']>>
+  font: Awaited<ReturnType<PDFDocument['embedFont']>>,
+  textRasters: Map<string, string>
 ): Promise<void> {
   const color = parseHex(annotation.style.color)
   const opacity = annotation.style.opacity
@@ -191,6 +194,23 @@ async function drawAnnotation(
       return
     }
     case 'text': {
+      const raster = textRasters.get(annotation.id)
+      if (raster) {
+        try {
+          const image = await pdfDoc.embedPng(Buffer.from(raster, 'base64'))
+          const box = normalizedBoxToPdf(annotation, { width: spec.width, height: spec.height })
+          pdfPage.drawImage(image, {
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            height: box.height,
+            opacity
+          })
+          return
+        } catch {
+          /* fall back to a single ink color */
+        }
+      }
       const topLeft = toPdf({ x: annotation.x, y: annotation.y }, spec)
       const lines = annotation.text.split(/\r?\n/)
       const lineHeight = annotation.fontSize * 1.25
@@ -209,7 +229,10 @@ async function drawAnnotation(
   }
 }
 
-export async function exportAnnotatedPdf(project: DocumentProject): Promise<string> {
+export async function exportAnnotatedPdf(
+  project: DocumentProject,
+  textRasters: TextRaster[] = []
+): Promise<string> {
   const originalPath = project.sourcePdfPath || path.join(project.projectDir, ORIGINAL_PDF_FILE)
   let sourceBytes: Buffer
   try {
@@ -230,6 +253,7 @@ export async function exportAnnotatedPdf(project: DocumentProject): Promise<stri
 
   const out = await PDFDocument.create()
   const font = await out.embedFont(StandardFonts.Helvetica)
+  const rasters = new Map(textRasters.map((item) => [item.annotationId, item.pngBase64]))
 
   for (const spec of project.pages) {
     let pdfPage: PDFPage
@@ -242,7 +266,7 @@ export async function exportAnnotatedPdf(project: DocumentProject): Promise<stri
     }
     const pageAnnotations = project.annotations.find((item) => item.page === spec.page)?.annotations ?? []
     for (const annotation of pageAnnotations) {
-      await drawAnnotation(pdfPage, spec, annotation, font)
+      await drawAnnotation(out, pdfPage, spec, annotation, font, rasters)
     }
   }
 
@@ -267,7 +291,7 @@ export async function inspectPdf(filePath: string): Promise<{ pageCount: number;
     const pdf = await PDFDocument.load(bytes, { ignoreEncryption: false })
     if (pdf.isEncrypted) {
       throw new AppError(
-        'This PDF is password protected. Unlock it before adding it to StudyPDF.',
+        `This PDF is password protected. Unlock it before adding it to ${APP_NAME}.`,
         ERROR_CODES.PASSWORD_PROTECTED
       )
     }
@@ -278,7 +302,7 @@ export async function inspectPdf(filePath: string): Promise<{ pageCount: number;
     const message = error instanceof Error ? error.message : ''
     if (/password|encrypt/i.test(message)) {
       throw new AppError(
-        'This PDF is password protected. Unlock it before adding it to StudyPDF.',
+        `This PDF is password protected. Unlock it before adding it to ${APP_NAME}.`,
         ERROR_CODES.PASSWORD_PROTECTED
       )
     }

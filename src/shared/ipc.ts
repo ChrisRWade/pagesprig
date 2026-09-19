@@ -34,13 +34,24 @@ export interface SaveProjectRequest {
   exportPdf?: boolean
 }
 
+export interface TextRaster {
+  annotationId: string
+  pngBase64: string
+}
+
 export interface ExportRequest {
   project: DocumentProject
+  textRasters?: TextRaster[]
 }
 
 export interface AddNotePageRequest {
   project: DocumentProject
   source: PageSource
+}
+
+export interface RemoveNotePageRequest {
+  project: DocumentProject
+  page: number
 }
 
 export interface StudyApi {
@@ -54,6 +65,7 @@ export interface StudyApi {
   listDocuments: () => Promise<IpcResult<DocumentSummary[]>>
   readPdf: (filePath: string) => Promise<IpcResult<Uint8Array>>
   addNotePage: (request: AddNotePageRequest) => Promise<IpcResult<DocumentProject>>
+  removeNotePage: (request: RemoveNotePageRequest) => Promise<IpcResult<DocumentProject>>
   writeCheckpoint: (project: DocumentProject) => Promise<IpcResult<string>>
   loadCheckpoint: (projectDir: string) => Promise<IpcResult<DocumentProject>>
   getSession: () => Promise<IpcResult<SessionState>>
@@ -78,6 +90,7 @@ export const IPC_CHANNELS = {
   listDocuments: 'docs:list',
   readPdf: 'docs:readPdf',
   addNotePage: 'docs:addNotePage',
+  removeNotePage: 'docs:removeNotePage',
   writeCheckpoint: 'recovery:write',
   loadCheckpoint: 'recovery:load',
   getSession: 'session:get',

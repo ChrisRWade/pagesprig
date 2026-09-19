@@ -1,19 +1,19 @@
 {
-  "name": "study-pdf",
+  "name": "pagesprig",
   "version": "0.1.0",
   "description": "A child-friendly Windows desktop app for completing school worksheets and taking notes on PDFs.",
-  "author": "StudyPDF contributors",
+  "author": "PageSprig contributors",
   "license": "MIT",
   "private": false,
   "type": "module",
   "main": "./out/main/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ChrisRWade/study-pdf.git"
+    "url": "https://github.com/ChrisRWade/pagesprig.git"
   },
-  "homepage": "https://github.com/ChrisRWade/study-pdf",
+  "homepage": "https://github.com/ChrisRWade/pagesprig",
   "bugs": {
-    "url": "https://github.com/ChrisRWade/study-pdf/issues"
+    "url": "https://github.com/ChrisRWade/pagesprig/issues"
   },
   "engines": {
     "node": ">=20.19.0"

@@ -85,3 +85,24 @@ export function parseSettings(value: unknown): AppSettings {
 export function settingsNeedSetup(settings: AppSettings): boolean {
   return !settings.setupComplete || !settings.storageRoot || settings.students.length === 0
 }
+
+export function isConfiguredSettings(settings: AppSettings): boolean {
+  return (
+    settings.setupComplete === true &&
+    Boolean(settings.storageRoot) &&
+    settings.students.some((student) => student.name.trim().length > 0)
+  )
+}
+
+export function shouldAdoptLegacySettings(current: AppSettings, legacy: AppSettings): boolean {
+  return !isConfiguredSettings(current) && isConfiguredSettings(legacy)
+}
+
+export function shouldKeepExistingSettings(existing: AppSettings, incoming: AppSettings): boolean {
+  return (
+    isConfiguredSettings(existing) &&
+    !incoming.setupComplete &&
+    incoming.students.length > 0 &&
+    !incoming.students.some((student) => student.name.trim())
+  )
+}

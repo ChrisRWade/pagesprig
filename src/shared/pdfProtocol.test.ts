@@ -5,7 +5,7 @@ describe('pdf protocol urls', () => {
   it('round-trips Windows paths that contain plus signs', () => {
     const filePath = 'C:\\Users\\crwad\\Downloads\\SS3+1.2.1+Student+PDF.pdf'
     const url = pdfProtocolUrl(filePath)
-    expect(url.startsWith('study-pdf://local/')).toBe(true)
+    expect(url.startsWith('pagesprig://local/')).toBe(true)
     expect(filePathFromPdfProtocolUrl(url)).toBe(filePath)
   })
 

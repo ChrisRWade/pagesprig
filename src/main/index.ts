@@ -1,8 +1,10 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
+import { APP_ID } from '@shared/constants'
 import { registerIpc } from './ipc/register'
 import { registerPdfProtocol, registerPdfScheme } from './protocol'
 import { markCleanExit } from './recovery/session'
+import { loadSettings } from './storage/settingsStore'
 import { createMainWindow } from './windows'
 
 registerPdfScheme()
@@ -10,7 +12,7 @@ registerPdfScheme()
 process.env.APP_ROOT = join(__dirname, '../..')
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('org.studypdf.app')
+  app.setAppUserModelId(APP_ID)
 }
 
 app.on('web-contents-created', (_event, contents) => {
@@ -20,7 +22,8 @@ app.on('web-contents-created', (_event, contents) => {
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await loadSettings()
   registerPdfProtocol()
   registerIpc()
   createMainWindow()

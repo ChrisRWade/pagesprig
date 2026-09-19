@@ -1,5 +1,6 @@
 import { formatTime } from '@shared/utils'
 import { Button } from '../shared/Button'
+import { BrandLockup } from '../chrome/Brand'
 import { openProject, openSummary } from '../../services/documents'
 import { useAppStore } from '../../stores/appStore'
 import styles from './RecoveryScreen.module.css'
@@ -27,6 +28,7 @@ export function RecoveryScreen() {
 
   return (
     <main className={styles.wrap}>
+      <BrandLockup size="md" />
       <h1>We found schoolwork that was open when the app closed.</h1>
       <p>Choose Resume to keep going from the last autosave.</p>
       <ul className={styles.list}>

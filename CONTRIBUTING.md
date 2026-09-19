@@ -1,4 +1,4 @@
-# Contributing to StudyPDF
+# Contributing to PageSprig
 
 Thank you for helping make a calmer way for children to do schoolwork on PDFs.
 

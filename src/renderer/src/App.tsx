@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { settingsNeedSetup } from '@shared/settingsSchema'
+import { APP_NAME } from '@shared/constants'
 import { AppHeader } from './components/chrome/AppHeader'
+import { BrandLockup } from './components/chrome/Brand'
 import { StudentPicker } from './components/chrome/StudentPicker'
 import { RecoveryScreen } from './components/recovery/RecoveryScreen'
 import { RecentDocuments } from './components/recent/RecentDocuments'
@@ -92,7 +94,12 @@ export default function App() {
       onDrop={onDrop}
     >
       <ToastHost />
-      {view === 'loading' && <main className={styles.center}>Opening StudyPDF…</main>}
+      {view === 'loading' && (
+        <main className={styles.center}>
+          <BrandLockup size="lg" />
+          <p>Opening {APP_NAME}…</p>
+        </main>
+      )}
       {view === 'setup' && <SetupWizard />}
       {view === 'recovery' && <RecoveryScreen />}
       {view === 'picker' && <StudentPicker />}

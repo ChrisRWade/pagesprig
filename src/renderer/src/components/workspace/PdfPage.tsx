@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { Annotation, DocumentProject, Point, TextAnnotation } from '@shared/types'
 import { cssCursorForTool } from '../../cursors/toolCursors'
+import { contrastInkFromCanvas } from '../../services/contrastInk'
+import { registerPageSample, unregisterPageSample } from '../../services/pageCanvasRegistry'
 import { renderNotePage, renderPdfPage } from '../../services/pdfRenderer'
+import type { PageSample } from '../../services/adaptiveText'
 import { AnnotationLayer } from './AnnotationLayer'
 import { TextEditorOverlay } from './TextEditorOverlay'
 import type { ToolId } from '@shared/types'
@@ -72,6 +75,25 @@ export function PdfPage({ project, pdf, page, width, active, tool, priority = 1 
     }
   }, [active, height, originalPage, pdf, priority, project.id, source, width])
 
+  const pickContrastInk = useCallback(
+    (box: TextBox) => contrastInkFromCanvas(canvasRef.current, box, size),
+    [size]
+  )
+
+  const [sampleGen, setSampleGen] = useState(0)
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current
+    if (!ready || !canvas) return
+    registerPageSample(project.id, page, canvas, size)
+    setSampleGen((current) => current + 1)
+    return () => unregisterPageSample(project.id, page, canvas)
+  }, [page, project.id, ready, size])
+
+  const pageSample = useMemo((): PageSample | null => {
+    if (!ready || !canvasRef.current || sampleGen === 0) return null
+    return { canvas: canvasRef.current, rendered: size }
+  }, [ready, sampleGen, size])
+
   if (!spec) return null
 
   return (
@@ -94,6 +116,8 @@ export function PdfPage({ project, pdf, page, width, active, tool, priority = 1 
           height={size.height}
           tool={tool}
           editingText={Boolean(editing)}
+          pageSample={pageSample}
+          pickContrastInk={pickContrastInk}
           onStartText={(point: Point, existing: Annotation | undefined, box: TextBox) => {
             setEditing({
               point,
@@ -113,6 +137,8 @@ export function PdfPage({ project, pdf, page, width, active, tool, priority = 1 
             box={editing.box}
             rendered={size}
             pageSize={pageSize}
+            pageSample={pageSample}
+            pickContrastInk={pickContrastInk}
             onClose={() => setEditing(null)}
           />
         </div>

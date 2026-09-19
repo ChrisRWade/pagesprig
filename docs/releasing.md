@@ -1,4 +1,4 @@
-# Releasing StudyPDF
+# Releasing PageSprig
 
 1. Update `version` in `package.json` and `APP_VERSION` in `src/shared/constants.ts`.
 2. Commit the version bump.

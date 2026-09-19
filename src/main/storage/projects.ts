@@ -4,7 +4,9 @@ import { dialog } from 'electron'
 import { ERROR_CODES, PROJECT_VERSION } from '@shared/constants'
 import { applyTemplate, templateContext, uniqueName } from '@shared/pathTemplate'
 import { emptyPageAnnotations, serializeProject } from '@shared/serialize'
+import { isNotePageSourceValue, removeNotePageFromProject } from '@shared/notePages'
 import type { AppSettings, DocumentProject, DocumentSummary, PageSource, Student } from '@shared/types'
+import type { TextRaster } from '@shared/ipc'
 import { createId, localIsoDate, nowIso } from '@shared/utils'
 import { copyOriginalPdf, exportAnnotatedPdf, fileFingerprint, inspectPdf } from '../export/pdfExport'
 import { AppError, isInsideRoot } from './errors'
@@ -157,6 +159,9 @@ export async function importPdfFiles(
 }
 
 export async function addNotePage(project: DocumentProject, source: PageSource): Promise<DocumentProject> {
+  if (!isNotePageSourceValue(source)) {
+    throw new AppError('Choose a blank, lined, graph, or dot notes page.', ERROR_CODES.VALIDATION)
+  }
   const last = project.pages[project.pages.length - 1]
   const width = last?.width ?? 612
   const height = last?.height ?? 792
@@ -171,8 +176,22 @@ export async function addNotePage(project: DocumentProject, source: PageSource):
   return saveProjectToDisk(next, { expectedFingerprint: project.fingerprint })
 }
 
-export async function exportProjectPdf(project: DocumentProject): Promise<DocumentProject> {
-  await exportAnnotatedPdf(project)
+export async function removeNotePage(project: DocumentProject, pageNumber: number): Promise<DocumentProject> {
+  try {
+    const next = removeNotePageFromProject(project, pageNumber)
+    return saveProjectToDisk(next, { expectedFingerprint: project.fingerprint })
+  } catch (error) {
+    if (error instanceof AppError) throw error
+    const message = error instanceof Error ? error.message : 'That notes page could not be removed.'
+    throw new AppError(message, ERROR_CODES.VALIDATION)
+  }
+}
+
+export async function exportProjectPdf(
+  project: DocumentProject,
+  textRasters: TextRaster[] = []
+): Promise<DocumentProject> {
+  await exportAnnotatedPdf(project, textRasters)
   return saveProjectToDisk(
     { ...project, lastExportedAt: nowIso() },
     { expectedFingerprint: project.fingerprint }

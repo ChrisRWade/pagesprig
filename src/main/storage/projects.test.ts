@@ -50,7 +50,7 @@ function sample(dir: string): DocumentProject {
 
 describe('project loading and checkpoints', () => {
   it('reloads annotations from disk', async () => {
-    const dir = path.join(tmpdir(), `studypdf-load-${Date.now()}`)
+    const dir = path.join(tmpdir(), `pagesprig-load-${Date.now()}`)
     await mkdir(dir, { recursive: true })
     const project = sample(dir)
     await writeFile(path.join(dir, 'annotations.study.json'), serializeProject(project))
@@ -60,7 +60,7 @@ describe('project loading and checkpoints', () => {
   })
 
   it('keeps a rolling window of recovery checkpoints', async () => {
-    const dir = path.join(tmpdir(), `studypdf-check-${Date.now()}`)
+    const dir = path.join(tmpdir(), `pagesprig-check-${Date.now()}`)
     await mkdir(dir, { recursive: true })
     const project = sample(dir)
     for (let i = 0; i < 10; i += 1) {

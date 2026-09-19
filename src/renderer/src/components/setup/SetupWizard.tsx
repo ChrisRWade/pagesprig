@@ -4,7 +4,9 @@ import { createId, nowIso } from '@shared/utils'
 import type { AppSettings, Student, Subject } from '@shared/types'
 import { Button } from '../shared/Button'
 import { AvatarField } from '../shared/AvatarField'
+import { APP_NAME } from '@shared/constants'
 import { useAppStore } from '../../stores/appStore'
+import { BrandLockup } from '../chrome/Brand'
 import styles from './SetupWizard.module.css'
 
 function emptyStudent(index: number): Student {
@@ -115,13 +117,13 @@ export function SetupWizard() {
 
   return (
     <main className={styles.wrap}>
-      <p className={styles.kicker}>StudyPDF</p>
+      <BrandLockup size="lg" />
       {step === 0 && (
         <>
           <h1>A notebook for worksheets.</h1>
           <p>
             Choose a folder on this computer for schoolwork. It can be a regular folder, a Google Drive for Desktop
-            folder, OneDrive, Dropbox, or any other synced folder. StudyPDF never uploads files itself.
+            folder, OneDrive, Dropbox, or any other synced folder. {APP_NAME} never uploads files itself.
           </p>
           <Button onClick={() => void chooseFolder()}>Choose schoolwork folder</Button>
         </>

@@ -4,6 +4,7 @@ import { debounce } from '@shared/utils'
 import { useEffect } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useDocumentStore } from '../stores/documentStore'
+import { collectTextRasters } from './textRasters'
 import type { DocumentProject } from '@shared/types'
 
 const saveLocks = new Map<string, Promise<unknown>>()
@@ -154,7 +155,8 @@ export async function saveNow(id: string, exportPdf = false): Promise<boolean> {
 
     if (exportPdf) {
       useDocumentStore.getState().setExportStatus(id, 'exporting')
-      const exported = await window.studyApi.exportPdf({ project: saved })
+      const textRasters = await collectTextRasters(saved)
+      const exported = await window.studyApi.exportPdf({ project: saved, textRasters })
       if (!exported.ok) {
         useDocumentStore.getState().setExportStatus(id, 'error')
         useAppStore.getState().setSaveError(

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 520" role="img" aria-labelledby="title desc">
+  <title id="title">PageSprig logo</title>
+  <desc id="desc">PageSprig wordmark with document and sprig icon.</desc>
+  <g transform="translate(36 36) scale(0.438)">
+    <rect x="128" y="128" width="768" height="768" rx="176" fill="#183153"/>
+    <path d="
+      M 330 224
+      H 610
+      L 704 318
+      V 744
+      Q 704 792 656 792
+      H 330
+      Q 282 792 282 744
+      V 272
+      Q 282 224 330 224
+      Z" fill="#FFFFFF"/>
+    <path d="M 610 224 V 318 H 704" fill="none" stroke="#183153" stroke-width="28" stroke-linejoin="round"/>
+    <path d="M 596 706 C 598 625 612 559 642 502" fill="none" stroke="#35A66F" stroke-width="34" stroke-linecap="round"/>
+    <path d="M 639 541 C 685 498 743 497 771 519 C 746 566 689 584 644 562 Z" fill="#35A66F"/>
+    <path d="M 618 610 C 579 568 531 568 506 588 C 528 630 575 645 616 630 Z" fill="#35A66F"/>
+  </g>
+  <text x="520" y="325" font-family="Atkinson Hyperlegible, Segoe UI, Arial, sans-serif"
+        font-size="236" font-weight="700" letter-spacing="-7" fill="#183153">
+    Page<tspan fill="#35A66F">Sprig</tspan>
+  </text>
+</svg>

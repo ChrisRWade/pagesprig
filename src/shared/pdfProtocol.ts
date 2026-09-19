@@ -1,4 +1,6 @@
-export const PDF_SCHEME = 'study-pdf'
+import { APP_NAME } from './constants'
+
+export const PDF_SCHEME = 'pagesprig'
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = ''
@@ -49,5 +51,5 @@ export function toPdfBytes(data: unknown): Uint8Array {
   if (data && typeof data === 'object' && Array.isArray((data as { data?: unknown }).data)) {
     return Uint8Array.from((data as { data: number[] }).data)
   }
-  throw new Error('StudyPDF could not read that worksheet from the schoolwork folder.')
+  throw new Error(`${APP_NAME} could not read that worksheet from the schoolwork folder.`)
 }
