@@ -26,6 +26,8 @@ const doc = (overrides: Partial<DocumentSummary>): DocumentSummary => ({
   lastOpenedAt: '2026-09-17T12:00:00.000Z',
   lastExportedAt: null,
   pageCount: 2,
+  dayRanges: [],
+  overviewEndPage: 0,
   ...overrides
 })
 
@@ -82,5 +84,24 @@ describe('recent filters', () => {
     expect(grouped[0].items.map((item) => item.id)).toEqual(['new', 'also-new'])
     expect(recentFilterActive({ ...DEFAULT_RECENT_FILTER, query: 'math' })).toBe(true)
     expect(recentFilterActive(DEFAULT_RECENT_FILTER)).toBe(false)
+  })
+
+  it('keeps a multi-day packet in today when later pages fall on that day', () => {
+    const packet = doc({
+      id: 'packet',
+      date: '2026-09-16',
+      pageCount: 6,
+      dayRanges: [
+        { date: '2026-09-16', startPage: 1, endPage: 3 },
+        { date: '2026-09-17', startPage: 4, endPage: 6 }
+      ]
+    })
+    const today = filterAndSortRecent(
+      [packet, doc({ id: 'old', date: '2026-09-10' })],
+      { ...DEFAULT_RECENT_FILTER, range: 'today' },
+      '2026-09-17',
+      () => names
+    )
+    expect(today.map((item) => item.id)).toEqual(['packet'])
   })
 })

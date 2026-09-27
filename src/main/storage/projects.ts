@@ -4,6 +4,7 @@ import { dialog } from 'electron'
 import { ERROR_CODES, PROJECT_VERSION } from '@shared/constants'
 import { applyTemplate, templateContext, uniqueName } from '@shared/pathTemplate'
 import { emptyPageAnnotations, serializeProject } from '@shared/serialize'
+import { expandLastRange, initialPacketSplit } from '@shared/packetDays'
 import { isNotePageSourceValue, removeNotePageFromProject } from '@shared/notePages'
 import type { AppSettings, DocumentProject, DocumentSummary, PageSource, Student } from '@shared/types'
 import type { TextRaster } from '@shared/ipc'
@@ -140,6 +141,7 @@ export async function importPdfFiles(
           height: size.height
         })),
         annotations: emptyPageAnnotations(info.pageCount),
+        ...initialPacketSplit(date, info.pageCount),
         status: 'not_started',
         createdAt,
         updatedAt: createdAt,
@@ -170,6 +172,7 @@ export async function addNotePage(project: DocumentProject, source: PageSource):
     ...project,
     pages: [...project.pages, { page, source, width, height }],
     annotations: [...project.annotations, { page, annotations: [] }],
+    dayRanges: expandLastRange(project.dayRanges ?? [], page, project.date, project.overviewEndPage ?? 0),
     status: project.status === 'not_started' ? 'in_progress' : project.status,
     updatedAt: nowIso()
   }

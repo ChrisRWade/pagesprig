@@ -36,9 +36,12 @@ Desktop.ini
 
 # Packaging leftovers
 *.exe
+*.deb
+*.AppImage
 *.blockmap
 *.nsis.7z
 win-unpacked/
+linux-unpacked/
 
 # Local schoolwork / personal data (never commit)
 /storage/

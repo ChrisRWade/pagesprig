@@ -12,7 +12,9 @@ git push origin v0.1.1
 The Release workflow builds:
 
 - a Windows NSIS installer
-- a portable `.exe`
+- a portable Windows `.exe`
+- a Linux Mint `.deb` installer
+- a Linux AppImage
 
 Builds are **not code-signed**. Windows SmartScreen may show a warning. That is expected for community builds until a certificate is added.
 

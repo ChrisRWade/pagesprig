@@ -1,7 +1,7 @@
 {
   "name": "pagesprig",
   "version": "0.1.0",
-  "description": "A child-friendly Windows desktop app for completing school worksheets and taking notes on PDFs.",
+  "description": "A child-friendly desktop app for completing school worksheets and taking notes on PDFs.",
   "author": "PageSprig contributors",
   "license": "MIT",
   "private": false,
@@ -12,6 +12,7 @@
     "url": "https://github.com/ChrisRWade/pagesprig.git"
   },
   "homepage": "https://github.com/ChrisRWade/pagesprig",
+  "desktopName": "pagesprig.desktop",
   "bugs": {
     "url": "https://github.com/ChrisRWade/pagesprig/issues"
   },
@@ -30,8 +31,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "generate:samples": "tsx scripts/generate-samples.ts",
-    "package": "npm run build && electron-builder --win --config electron-builder.yml",
-    "release": "npm run build && electron-builder --win --config electron-builder.yml --publish always"
+    "package": "npm run build && electron-builder --config electron-builder.yml",
+    "package:win": "npm run build && electron-builder --win --config electron-builder.yml",
+    "package:linux": "npm run build && electron-builder --linux --config electron-builder.yml",
+    "release": "npm run build && electron-builder --config electron-builder.yml --publish always"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.2.8",

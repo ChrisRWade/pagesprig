@@ -4,7 +4,7 @@
 
 # PageSprig
 
-PageSprig is a Windows desktop notebook for school worksheets.
+PageSprig is a desktop notebook for school worksheets on Windows and Linux Mint.
 
 Homeschool platforms such as Miacademy and MiaPrep send a lot of printable PDFs. Instead of printing every page, a child can drop a worksheet into PageSprig and write, type, highlight, and draw on it. The original PDF is never changed. Notes are stored beside it and can be exported as a normal PDF.
 
@@ -33,6 +33,7 @@ PageSprig is built around that loop.
 - Zoom that keeps writing aligned with the page
 - Autosave and crash recovery
 - Today view and recent work
+- Parent calendar: check a day's work and record an optional score such as 8/9
 - Lined, graph, dot, and blank note pages
 - Portable PDF export
 - Offline by design
@@ -77,19 +78,28 @@ School/
 
 ## Installation
 
-Unsigned Windows builds may trigger a SmartScreen warning.
+Kids and parents should install from GitHub Releases, not from the source code.
 
-Download the installer or portable executable from [Releases](https://github.com/ChrisRWade/pagesprig/releases), or build from source:
+1. Open [Releases](https://github.com/ChrisRWade/pagesprig/releases).
+2. Download the installer for that computer:
+   - **Windows:** `PageSprig-*-win-x64.exe` (skip the file whose name includes `portable` unless you want a USB copy). The current public build is still named `StudyPDF-0.1.0-win-x64.exe`.
+   - **Linux Mint:** `PageSprig-*-linux-amd64.deb`
+3. Install it:
+   - **Windows:** run the installer. Unsigned builds may show a SmartScreen warning; choose **More info**, then **Run anyway**.
+   - **Linux Mint:** double-click the `.deb`, or in a terminal run `sudo apt install ./PageSprig-*-linux-amd64.deb`.
+4. Point PageSprig at the same schoolwork folder on every computer that should see the same worksheets.
 
-```bash
-git clone https://github.com/ChrisRWade/pagesprig.git
-cd pagesprig
-npm install
-npm run generate:samples
-npm run package
-```
+If a Mint machine cannot install a `.deb`, use the AppImage instead: mark `PageSprig-*-linux-x86_64.AppImage` executable and run it.
 
-The packaged app is written to `release/`.
+The original PDFs and writing live in the schoolwork folder, not inside the app.
+
+### Updates
+
+There is no in-app auto-update. A new version is a new installer on the same Releases page.
+
+Install the newer Windows `.exe` or Linux `.deb` over the existing one. Children's work stays in the schoolwork folder, so updating does not delete worksheets.
+
+Maintainers: bump `version` in `package.json`, tag `vX.Y.Z`, and push the tag. GitHub Actions builds the unsigned Windows and Linux installers and attaches them to that release.
 
 ## Development
 
@@ -109,7 +119,18 @@ Other commands:
 | `npm run lint` | ESLint |
 | `npm test` | Vitest |
 | `npm run build` | Production Electron bundle |
-| `npm run package` | Windows installer + portable exe |
+| `npm run package` | Installer for this computer's OS |
+| `npm run package:win` | Windows installer + portable exe |
+| `npm run package:linux` | Linux Mint `.deb` + AppImage |
+
+To build a local installer:
+
+```bash
+npm run generate:samples
+npm run package
+```
+
+The packaged app is written to `release/`.
 
 Sample worksheets live in `samples/`. Do not commit copyrighted curriculum PDFs.
 

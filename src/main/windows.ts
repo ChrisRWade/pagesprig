@@ -1,6 +1,12 @@
-import { BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { APP_NAME } from '@shared/constants'
+
+function windowIcon(): string {
+  const file = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+  if (app.isPackaged) return join(process.resourcesPath, file)
+  return join(__dirname, '../../build', file)
+}
 
 export function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -11,7 +17,7 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     autoHideMenuBar: true,
     title: APP_NAME,
-    icon: join(__dirname, '../../build/icon.ico'),
+    icon: windowIcon(),
     backgroundColor: '#D9CDB8',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

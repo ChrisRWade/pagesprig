@@ -15,6 +15,8 @@ const project = (overrides: Partial<DocumentProject> = {}): DocumentProject => (
   exportPdfPath: '/tmp/list-finished.pdf',
   pages: [],
   annotations: [],
+    dayRanges: [],
+    overviewEndPage: 0,
   status: 'in_progress',
   createdAt: '2026-09-17T12:00:00.000Z',
   updatedAt: '2026-09-17T12:00:00.000Z',

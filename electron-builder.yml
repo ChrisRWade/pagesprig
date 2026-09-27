@@ -16,6 +16,10 @@ extraResources:
     to: samples
     filter:
       - '*.pdf'
+  - from: build/icon.png
+    to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
 win:
   icon: icon.ico
   target:
@@ -33,6 +37,24 @@ nsis:
   uninstallDisplayName: PageSprig
 portable:
   artifactName: ${productName}-${version}-${os}-${arch}-portable.${ext}
+linux:
+  icon: icon.png
+  category: Education
+  maintainer: PageSprig contributors
+  synopsis: A schoolwork notebook for PDF worksheets
+  executableName: pagesprig
+  syncDesktopName: true
+  desktop:
+    entry:
+      Name: PageSprig
+      Comment: Complete school worksheets and take notes on PDFs
+      Categories: Education;Office;
+  target:
+    - deb
+    - AppImage
+deb:
+  packageName: pagesprig
+  packageCategory: education
 publish:
   provider: github
   owner: ChrisRWade

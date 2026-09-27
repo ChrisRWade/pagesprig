@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import { mergeDocumentCatalog, annotationsForPage } from '@shared/serialize'
 import { isNotePageSource } from '@shared/notePages'
+import { dayRangesOf, setDayReview, withDayRanges } from '@shared/packetDays'
+import { nowIso } from '@shared/utils'
 import { forgetPdf, loadPdfDocument } from './pdfRenderer'
 import { saveNow } from './autosave'
 import { useAppStore } from '../stores/appStore'
 import { useDocumentStore } from '../stores/documentStore'
-import type { DocumentProject, DocumentSummary, PageSource } from '@shared/types'
+import type { DocumentProject, DocumentSummary, PacketDay, PageSource } from '@shared/types'
 
 export function useCatalogDocuments(): DocumentSummary[] {
   const listed = useAppStore((state) => state.documents)
@@ -55,16 +57,78 @@ export async function openProject(
   }
   useDocumentStore.getState().openDocument(project, null)
   useAppStore.getState().setView('main')
+  useAppStore.getState().setOverviewOpen(false)
+  useAppStore.getState().requestPage(1)
   return true
 }
 
-export async function openSummary(summary: DocumentSummary): Promise<void> {
+export async function focusStudentAndSubject(studentId: string, subjectId?: string): Promise<void> {
+  const settings = useAppStore.getState().settings
+  const student = settings.students.find((item) => item.id === studentId)
+  const nextSubject = subjectId ?? student?.subjects[0]?.id ?? null
+  if (settings.selectedStudentId === studentId && settings.selectedSubjectId === nextSubject) return
+  const next = {
+    ...settings,
+    selectedStudentId: studentId,
+    selectedSubjectId: nextSubject
+  }
+  const saved = await window.studyApi.saveSettings(next)
+  if (saved.ok) useAppStore.getState().setSettings(saved.data)
+}
+
+export async function openSummary(
+  summary: DocumentSummary,
+  options?: { page?: number }
+): Promise<void> {
+  await focusStudentAndSubject(summary.studentId, summary.subjectId)
   const loaded = await window.studyApi.loadProject(summary.projectDir)
   if (!loaded.ok) {
     useAppStore.getState().setError(loaded.error)
     return
   }
-  await openProject(loaded.data)
+  const opened = await openProject(loaded.data)
+  if (opened) useAppStore.getState().requestPage(options?.page ?? 1)
+}
+
+export async function saveDayRanges(
+  project: DocumentProject,
+  ranges: PacketDay[],
+  overviewEndPage = project.overviewEndPage ?? 0
+): Promise<boolean> {
+  const next = { ...withDayRanges(project, ranges, overviewEndPage), updatedAt: nowIso() }
+  if (useDocumentStore.getState().open[project.id]) {
+    useDocumentStore.getState().patchProject(project.id, next)
+    return saveNow(project.id)
+  }
+  const saved = await window.studyApi.saveProject({
+    project: next,
+    expectedFingerprint: project.fingerprint
+  })
+  if (!saved.ok) {
+    useAppStore.getState().setError(saved.error)
+    return false
+  }
+  await refreshDocuments()
+  return true
+}
+
+export async function saveDayReview(
+  summary: DocumentSummary,
+  date: string,
+  patch: { reviewed?: boolean; questionCount?: number | null; correctCount?: number | null }
+): Promise<boolean> {
+  const open = useDocumentStore.getState().open[summary.id]?.project
+  let project = open
+  if (!project) {
+    const loaded = await window.studyApi.loadProject(summary.projectDir)
+    if (!loaded.ok) {
+      useAppStore.getState().setError(loaded.error)
+      return false
+    }
+    project = loaded.data
+  }
+  const ranges = setDayReview(dayRangesOf(project), date, patch)
+  return saveDayRanges(project, ranges, project.overviewEndPage)
 }
 
 export async function removeDocument(projectDir: string, documentId?: string): Promise<void> {

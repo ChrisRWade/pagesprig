@@ -39,6 +39,8 @@ function project(dir: string, sourcePdfPath: string, extra?: Partial<DocumentPro
     exportPdfPath: path.join(dir, 'Export Sample.pdf'),
     pages: [{ page: 1, source: 'original', originalPage: 1, width: 612, height: 792 }],
     annotations: emptyPageAnnotations(1).map((page) => ({ ...page, annotations: [text] })),
+    dayRanges: [],
+    overviewEndPage: 0,
     status: 'completed',
     createdAt,
     updatedAt: createdAt,

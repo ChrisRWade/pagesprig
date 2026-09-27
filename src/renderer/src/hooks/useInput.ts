@@ -43,6 +43,18 @@ export function useKeyboard(): void {
       const activeId = docs.activeId
 
       if (event.key === 'Escape') {
+        if (app.packetEditorId || app.packetQueue.length > 0) {
+          app.dismissPacketSetup()
+          return
+        }
+        if (app.overviewOpen) {
+          app.setOverviewOpen(false)
+          return
+        }
+        if (app.view === 'review') {
+          app.setView(app.settings.selectedStudentId ? 'main' : 'picker')
+          return
+        }
         if (app.view === 'settings' || app.view === 'recent') app.closeOverlay()
         if (activeId) docs.setSelected(activeId, null)
         return

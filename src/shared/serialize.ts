@@ -1,4 +1,5 @@
 import { PROJECT_VERSION } from './constants'
+import { parseOverviewEnd, parsePacketDays } from './packetDays'
 import type { Annotation, DocumentProject, DocumentSummary, PageAnnotations, PageSpec } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -149,21 +150,26 @@ export function parseDocumentProject(value: unknown): DocumentProject | null {
   }
   if (!Array.isArray(value.pages) || !Array.isArray(value.annotations)) return null
   const status = value.status === 'completed' || value.status === 'in_progress' ? value.status : 'not_started'
+  const pages = value.pages.map(parsePageSpec).filter((item): item is PageSpec => item !== null)
+  const date = value.date as string
+  const overviewEndPage = parseOverviewEnd(value.overviewEndPage, pages.length)
   return {
     version: PROJECT_VERSION,
     id: value.id as string,
     studentId: value.studentId as string,
     subjectId: value.subjectId as string,
-    date: value.date as string,
+    date,
     title: value.title as string,
     originalFilename: value.originalFilename as string,
     sourcePdfPath: value.sourcePdfPath as string,
     projectDir: value.projectDir as string,
     exportPdfPath: value.exportPdfPath as string,
-    pages: value.pages.map(parsePageSpec).filter((item): item is PageSpec => item !== null),
+    pages,
     annotations: value.annotations
       .map(parsePageAnnotations)
       .filter((item): item is PageAnnotations => item !== null),
+    dayRanges: parsePacketDays(value.dayRanges, date, pages.length, overviewEndPage),
+    overviewEndPage,
     status,
     createdAt: value.createdAt as string,
     updatedAt: value.updatedAt as string,
@@ -192,7 +198,9 @@ export function toSummary(project: DocumentProject): DocumentSummary {
     updatedAt: project.updatedAt,
     lastOpenedAt: project.lastOpenedAt,
     lastExportedAt: project.lastExportedAt ?? null,
-    pageCount: project.pages.length
+    pageCount: project.pages.length,
+    dayRanges: parsePacketDays(project.dayRanges, project.date, project.pages.length, project.overviewEndPage ?? 0),
+    overviewEndPage: parseOverviewEnd(project.overviewEndPage, project.pages.length)
   }
 }
 

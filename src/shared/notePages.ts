@@ -1,4 +1,5 @@
 import { nowIso } from './utils'
+import { remapOverviewAfterPageRemoval, remapRangesAfterPageRemoval } from './packetDays'
 import type { DocumentProject, PageSource } from './types'
 
 export const NOTE_PAGE_SOURCES = ['blank', 'lined', 'graph', 'dot'] as const
@@ -43,6 +44,14 @@ export function removeNotePageFromProject(project: DocumentProject, pageNumber: 
     ...project,
     pages,
     annotations,
+    dayRanges: remapRangesAfterPageRemoval(
+      project.dayRanges ?? [],
+      pageNumber,
+      pages.length,
+      project.date,
+      project.overviewEndPage ?? 0
+    ),
+    overviewEndPage: remapOverviewAfterPageRemoval(project.overviewEndPage ?? 0, pageNumber, pages.length),
     updatedAt: nowIso()
   }
 }

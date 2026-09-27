@@ -1,4 +1,5 @@
 import { finishedPdfState, type FinishedPdfState } from './exportState'
+import { datesOverlapRange } from './packetDays'
 import { shiftIsoDate } from './utils'
 import type { DocumentStatus, DocumentSummary } from './types'
 
@@ -85,8 +86,9 @@ export function filterAndSortRecent(
     if (filter.subjectId && item.subjectId !== filter.subjectId) return false
     if (filter.status !== 'all' && item.status !== filter.status) return false
     if (filter.pdf !== 'all' && finishedPdfState(item) !== filter.pdf) return false
-    if (bounds.from && item.date < bounds.from) return false
-    if (bounds.to && item.date > bounds.to) return false
+    if (bounds.from || bounds.to) {
+      if (!datesOverlapRange(item, bounds.from, bounds.to)) return false
+    }
     return matchesRecentQuery(item, filter.query, namesFor(item))
   })
 

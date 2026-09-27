@@ -89,5 +89,23 @@ export const Icons = {
     <Svg title="Open list">
       <path d="M6 9l6 6 6-6" />
     </Svg>
+  ),
+  calculator: (
+    <Svg title="Calculator">
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M8 7h8" />
+      <path d="M8 12h.01" />
+      <path d="M12 12h.01" />
+      <path d="M16 12h.01" />
+      <path d="M8 16h.01" />
+      <path d="M12 16h.01" />
+      <path d="M16 16h.01" />
+    </Svg>
+  ),
+  overview: (
+    <Svg title="Lesson overview">
+      <path d="M5 5h6a3 3 0 0 1 3 3v11H8a3 3 0 0 0-3 3z" />
+      <path d="M19 5h-6a3 3 0 0 0-3 3v11h6a3 3 0 0 1 3 3z" />
+    </Svg>
   )
 }

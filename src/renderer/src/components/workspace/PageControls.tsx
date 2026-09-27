@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { APP_NAME, ZOOM_LEVELS } from '@shared/constants'
 import { finishedPdfState } from '@shared/exportState'
 import { isNotePageSource, type NotePageSource } from '@shared/notePages'
+import { dayRangesOf, hasLessonOverview, isMultiDay, overviewEndPageOf, pageSpanLabel } from '@shared/packetDays'
+import { formatShortDate } from '@shared/utils'
 import type { DocumentProject } from '@shared/types'
 import { Button } from '../shared/Button'
 import { useAppStore } from '../../stores/appStore'
@@ -31,6 +33,11 @@ export function PageControls({ project }: Props) {
   const jumpFocused = useRef(false)
   const spec = project.pages.find((item) => item.page === page)
   const canRemoveNotes = Boolean(spec && isNotePageSource(spec.source))
+  const ranges = dayRangesOf(project)
+  const multiDay = isMultiDay(ranges)
+  const canEditDays = project.pages.length > 1
+  const canOverview = hasLessonOverview(overviewEndPageOf(project), project.pages.length)
+  const overviewOpen = useAppStore((state) => state.overviewOpen)
 
   useEffect(() => {
     if (!jumpFocused.current) setJumpValue(String(page))
@@ -119,6 +126,42 @@ export function PageControls({ project }: Props) {
         </select>
       </div>
       <div className={styles.group}>
+        {canOverview && (
+          <button
+            type="button"
+            className={overviewOpen ? styles.dayOn : styles.day}
+            aria-pressed={overviewOpen}
+            title="Show the lesson overview beside this page"
+            onClick={() => useAppStore.getState().toggleOverview()}
+          >
+            Overview
+          </button>
+        )}
+        {multiDay && (
+          <div className={styles.days} role="tablist" aria-label="Packet days">
+            {ranges.map((range, index) => {
+              const on = page >= range.startPage && page <= range.endPage
+              return (
+                <button
+                  key={`${range.date}-${range.startPage}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  className={on ? styles.dayOn : styles.day}
+                  title={`${formatShortDate(range.date)} · ${pageSpanLabel(range)}`}
+                  onClick={() => goToPage(range.startPage)}
+                >
+                  Day {index + 1}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {canEditDays && (
+          <Button variant="ghost" onClick={() => useAppStore.getState().openPacketEditor(project.id)}>
+            Edit days
+          </Button>
+        )}
         <AddNotesMenu onPick={(source) => void addNotesPage(project, source)} />
         {canRemoveNotes && (
           <Button variant="ghost" onClick={() => void removeNotesPage(project, page)}>

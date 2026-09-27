@@ -40,6 +40,16 @@ export function StudentPicker() {
             </button>
           </li>
         ))}
+        {students.length > 0 && (
+          <li>
+            <button className={styles.review} onClick={() => setView('review')}>
+              <span className={styles.avatar} aria-hidden="true">
+                📅
+              </span>
+              Review
+            </button>
+          </li>
+        )}
       </ul>
       <button className={styles.settings} onClick={() => useAppStore.getState().openSettings()}>
         Settings

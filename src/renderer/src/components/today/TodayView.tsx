@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DocumentSummary, Student } from '@shared/types'
 import { APP_NAME } from '@shared/constants'
+import { appearsOnDate, packetDayLabel, pageSpanLabel, rangeForDate, workDatesOf } from '@shared/packetDays'
 import { formatDate, formatDayChip, formatShortDate, localIsoDate, schoolDayWindow } from '@shared/utils'
 import { Button } from '../shared/Button'
 import { ExportStamp } from '../shared/ExportStamp'
@@ -35,13 +36,13 @@ export function TodayView({ student, subjectId, documents }: Props) {
       ),
     [documents, student.id, subjectId]
   )
-  const workDates = useMemo(() => [...new Set(scoped.map((item) => item.date))].sort(), [scoped])
+  const workDates = useMemo(() => workDatesOf(scoped), [scoped])
   const days = schoolDayWindow(workDates, selectedDate, today)
   const earlier = workDates.filter((date) => date < selectedDate)
   const later = workDates.filter((date) => date > selectedDate)
   const previousDate = earlier[earlier.length - 1]
   const nextDate = later[0] ?? (selectedDate < today ? today : undefined)
-  const items = scoped.filter((item) => item.date === selectedDate)
+  const items = scoped.filter((item) => appearsOnDate(item, selectedDate))
   const grouped = student.subjects
     .filter((item) => !subjectId || item.id === subjectId)
     .map((item) => ({
@@ -50,7 +51,7 @@ export function TodayView({ student, subjectId, documents }: Props) {
     }))
     .filter((group) => group.items.length > 0)
   const hasWork = grouped.length > 0
-  const otherDates = [...new Set(scoped.filter((item) => item.date !== selectedDate).map((item) => item.date))].sort().reverse()
+  const otherDates = workDates.filter((date) => date !== selectedDate).sort().reverse()
   const otherCount = scoped.length - items.length
   const subjectName = subject?.name ?? 'this subject'
 
@@ -149,10 +150,19 @@ export function TodayView({ student, subjectId, documents }: Props) {
                 {group.items.length === 1 ? '1 worksheet' : `${group.items.length} worksheets`}
               </p>
               <ul>
-                {group.items.map((item) => (
+                {group.items.map((item) => {
+                  const range = rangeForDate(item, selectedDate)
+                  const day = packetDayLabel(item.dayRanges, selectedDate)
+                  return (
                   <li key={item.id} className={styles.item}>
-                    <button className={styles.row} onClick={() => void openSummary(item)}>
-                      <span className={styles.title}>{item.title}</span>
+                    <button
+                      className={styles.row}
+                      onClick={() => void openSummary(item, { page: range?.startPage })}
+                    >
+                      <span className={styles.title}>
+                        {item.title}
+                        {day ? <span className={styles.packet}>{day}{range ? ` · ${pageSpanLabel(range)}` : ''}</span> : null}
+                      </span>
                       <span className={styles.meta}>
                         <ExportStamp updatedAt={item.updatedAt} lastExportedAt={item.lastExportedAt} />
                         <Status status={item.status} />
@@ -174,7 +184,8 @@ export function TodayView({ student, subjectId, documents }: Props) {
                       Remove
                     </Button>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             </section>
           ))

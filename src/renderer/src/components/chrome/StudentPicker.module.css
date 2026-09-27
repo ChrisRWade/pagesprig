@@ -42,6 +42,31 @@
   transform: scale(0.97);
 }
 
+.review {
+  min-width: 180px;
+  min-height: 160px;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 28%, transparent);
+  background: color-mix(in srgb, var(--tray) 55%, var(--paper));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 22px;
+  font-family: var(--font-display);
+  color: var(--graphite);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+
+.review:hover {
+  border-color: var(--accent);
+  background: var(--paper);
+  transform: translateY(-2px);
+}
+
 .avatar {
   font-size: 36px;
 }

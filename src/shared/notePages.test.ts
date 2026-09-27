@@ -41,6 +41,8 @@ function project(): DocumentProject {
       { page: 2, annotations: [stroke(2, 'on-lined')] },
       { page: 3, annotations: [stroke(3, 'on-graph')] }
     ],
+    dayRanges: [],
+    overviewEndPage: 0,
     status: 'in_progress',
     createdAt,
     updatedAt: createdAt,

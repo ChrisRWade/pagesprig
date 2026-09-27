@@ -9,8 +9,24 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win
+            artifact: windows-build
+            path: |
+              release/*.exe
+              release/*.exe.blockmap
+          - os: ubuntu-latest
+            args: --linux
+            artifact: linux-build
+            path: |
+              release/*.deb
+              release/*.AppImage
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,17 +36,37 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - name: Build Windows installers
-        run: npm run package
+      - run: npm run build
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg
+      - name: Package
+        run: npx electron-builder ${{ matrix.args }} --config electron-builder.yml --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/*.exe
-            release/*.exe.blockmap
+            artifacts/windows-build/*
+            artifacts/linux-build/*
           generate_release_notes: true
           body: |
-            Unsigned Windows builds. Microsoft SmartScreen may warn because this release is not code-signed.
+            Unsigned builds.
+
+            **Windows:** install `PageSprig-*-win-x64.exe`. Microsoft SmartScreen may warn because this release is not code-signed.
+
+            **Linux Mint:** install `PageSprig-*-linux-amd64.deb` (double-click, or `sudo apt install ./PageSprig-*-linux-amd64.deb`). The AppImage is a no-install alternative.

@@ -8,6 +8,7 @@ import {
 } from '@shared/constants'
 import type { ToolId } from '@shared/types'
 import { canRedo, canUndo } from '@shared/history'
+import { hasLessonOverview } from '@shared/packetDays'
 import { Button } from '../shared/Button'
 import { Icons } from '../shared/Icons'
 import { useAppStore } from '../../stores/appStore'
@@ -48,6 +49,10 @@ export function Toolbar() {
   const setShapeTool = useAppStore((state) => state.setShapeTool)
   const activeId = useDocumentStore((state) => state.activeId)
   const history = useDocumentStore((state) => (state.activeId ? state.open[state.activeId]?.history : null))
+  const calculatorOpen = useAppStore((state) => state.calculatorOpen)
+  const overviewOpen = useAppStore((state) => state.overviewOpen)
+  const project = useDocumentStore((state) => (state.activeId ? state.open[state.activeId]?.project : null))
+  const canOverview = Boolean(project && hasLessonOverview(project.overviewEndPage ?? 0, project.pages.length))
 
   return (
     <aside className={styles.rail} aria-label="Writing tools">
@@ -110,6 +115,31 @@ export function Toolbar() {
       >
         {Icons.redo}
         <span>Redo</span>
+      </Button>
+      <div className={styles.spacer} />
+      {canOverview && (
+        <Button
+          variant="tool"
+          active={overviewOpen}
+          title="Lesson overview"
+          aria-label="Lesson overview"
+          aria-pressed={overviewOpen}
+          onClick={() => useAppStore.getState().toggleOverview()}
+        >
+          {Icons.overview}
+          <span>Overview</span>
+        </Button>
+      )}
+      <Button
+        variant="tool"
+        active={calculatorOpen}
+        title="Calculator"
+        aria-label="Calculator"
+        aria-pressed={calculatorOpen}
+        onClick={() => useAppStore.getState().toggleCalculator()}
+      >
+        {Icons.calculator}
+        <span>Calc</span>
       </Button>
     </aside>
   )

@@ -16,6 +16,8 @@ function sampleProject(): DocumentProject {
     exportPdfPath: 'C:/school/project/Fractions Practice.pdf',
     pages: [{ page: 1, source: 'original', originalPage: 1, width: 612, height: 792 }],
     annotations: [{ page: 1, annotations: [] }],
+    dayRanges: [],
+    overviewEndPage: 0,
     status: 'not_started',
     createdAt: '2026-09-16T12:00:00.000Z',
     updatedAt: '2026-09-16T12:00:00.000Z',
@@ -72,6 +74,53 @@ describe('annotation serialization', () => {
     expect(parsed?.lastExportedAt).toBe('2026-09-16T13:00:00.000Z')
   })
 
+  it('fills missing day ranges from the first school day', () => {
+    const parsed = parseDocumentProject({ ...sampleProject(), dayRanges: undefined, overviewEndPage: undefined })
+    expect(parsed?.dayRanges).toEqual([{ date: '2026-09-16', startPage: 1, endPage: 1 }])
+    expect(parsed?.overviewEndPage).toBe(0)
+  })
+
+  it('keeps a lesson overview ahead of the first school day', () => {
+    const parsed = parseDocumentProject({
+      ...sampleProject(),
+      pages: [
+        { page: 1, source: 'original', originalPage: 1, width: 612, height: 792 },
+        { page: 2, source: 'original', originalPage: 2, width: 612, height: 792 },
+        { page: 3, source: 'original', originalPage: 3, width: 612, height: 792 }
+      ],
+      overviewEndPage: 1,
+      dayRanges: [{ date: '2026-09-16', startPage: 2, endPage: 3 }]
+    })
+    expect(parsed?.overviewEndPage).toBe(1)
+    expect(parsed?.dayRanges).toEqual([{ date: '2026-09-16', startPage: 2, endPage: 3 }])
+  })
+
+  it('keeps parent review notes on a school day', () => {
+    const parsed = parseDocumentProject({
+      ...sampleProject(),
+      dayRanges: [
+        {
+          date: '2026-09-16',
+          startPage: 1,
+          endPage: 1,
+          reviewedAt: '2026-09-16T20:00:00.000Z',
+          questionCount: 9,
+          correctCount: 8
+        }
+      ]
+    })
+    expect(parsed?.dayRanges).toEqual([
+      {
+        date: '2026-09-16',
+        startPage: 1,
+        endPage: 1,
+        reviewedAt: '2026-09-16T20:00:00.000Z',
+        questionCount: 9,
+        correctCount: 8
+      }
+    ])
+  })
+
   it('rejects an unknown future project version', () => {
     const parsed = parseDocumentProject({ ...sampleProject(), version: 99 })
     expect(parsed).toBeNull()
@@ -102,7 +151,9 @@ describe('document catalog', () => {
         originalFilename: 'shown.pdf',
         updatedAt: '2026-09-17T12:00:00.000Z',
         lastOpenedAt: '2026-09-17T12:00:00.000Z',
-        pageCount: 1
+        pageCount: 1,
+        dayRanges: [],
+        overviewEndPage: 0
       }
     ]
     const hidden = sampleProject()

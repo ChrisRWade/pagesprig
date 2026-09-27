@@ -96,6 +96,9 @@ export function AppHeader() {
         <Button variant="ghost" onClick={() => setView('recent')}>
           Recent
         </Button>
+        <Button variant="ghost" onClick={() => setView('review')}>
+          Review
+        </Button>
         {pageCount > 1 && (
           <Button
             variant="ghost"

@@ -40,6 +40,8 @@ function sample(dir: string): DocumentProject {
         ]
       }
     ],
+    dayRanges: [],
+    overviewEndPage: 0,
     status: 'in_progress',
     createdAt,
     updatedAt: createdAt,

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { isNotePageSource } from '@shared/notePages'
+import { dayRangesOf, isOverviewPage, overviewEndPageOf } from '@shared/packetDays'
 import type { DocumentProject, PageSpec } from '@shared/types'
 import { loadPdfDocument, renderNotePage, renderPdfPage } from '../../services/pdfRenderer'
 import { removeNotesPage } from '../../services/documents'
@@ -52,6 +53,11 @@ function Thumb({
   const width = 52
   const height = width * (page.height / page.width)
   const notes = isNotePageSource(page.source)
+  const ranges = dayRangesOf(project)
+  const range = ranges.find((item) => item.startPage === page.page)
+  const overview = isOverviewPage(page.page, overviewEndPageOf(project))
+  const dayStart = Boolean(range)
+  const dayIndex = range ? ranges.indexOf(range) : 0
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -97,6 +103,8 @@ function Thumb({
       >
         <canvas ref={canvasRef} className={styles.sheet} aria-hidden="true" />
         {page.page}
+        {overview && <span className={styles.overview}>Overview</span>}
+        {dayStart && <span className={styles.day}>Day {dayIndex + 1}</span>}
       </button>
       {notes && (
         <button

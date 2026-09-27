@@ -4,7 +4,7 @@ import type { AppSettings, DocumentSummary, RecoveryInfo, ToolId } from '@shared
 import { defaultSettings, settingsNeedSetup } from '@shared/settingsSchema'
 import { createId } from '@shared/utils'
 
-export type AppView = 'loading' | 'setup' | 'recovery' | 'picker' | 'main' | 'settings' | 'recent'
+export type AppView = 'loading' | 'setup' | 'recovery' | 'picker' | 'main' | 'settings' | 'recent' | 'review'
 export type ToastKind = 'error' | 'success'
 
 export interface Toast {
@@ -29,6 +29,11 @@ interface AppState {
   documents: DocumentSummary[]
   recovery: RecoveryInfo[]
   pendingDrop: string[]
+  packetQueue: string[]
+  packetEditorId: string | null
+  calculatorOpen: boolean
+  overviewOpen: boolean
+  overviewPage: number
   thumbnailsOpen: boolean
   currentPage: number
   requestedPage: number | null
@@ -50,6 +55,14 @@ interface AppState {
   setDocuments: (documents: DocumentSummary[]) => void
   setRecovery: (recovery: RecoveryInfo[]) => void
   setPendingDrop: (paths: string[]) => void
+  enqueuePackets: (ids: string[]) => void
+  openPacketEditor: (id: string) => void
+  dismissPacketSetup: () => void
+  setCalculatorOpen: (open: boolean) => void
+  toggleCalculator: () => void
+  setOverviewOpen: (open: boolean) => void
+  toggleOverview: () => void
+  setOverviewPage: (page: number) => void
   setThumbnailsOpen: (open: boolean) => void
   setCurrentPage: (page: number) => void
   requestPage: (page: number) => void
@@ -89,6 +102,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   documents: [],
   recovery: [],
   pendingDrop: [],
+  packetQueue: [],
+  packetEditorId: null,
+  calculatorOpen: false,
+  overviewOpen: false,
+  overviewPage: 1,
   thumbnailsOpen: false,
   currentPage: 1,
   requestedPage: null,
@@ -133,6 +151,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   setDocuments: (documents) => set({ documents }),
   setRecovery: (recovery) => set({ recovery }),
   setPendingDrop: (pendingDrop) => set({ pendingDrop }),
+  enqueuePackets: (ids) => set({ packetQueue: [...get().packetQueue, ...ids.filter(Boolean)] }),
+  openPacketEditor: (packetEditorId) => set({ packetEditorId }),
+  dismissPacketSetup: () => {
+    const { packetEditorId, packetQueue } = get()
+    if (packetEditorId) {
+      set({ packetEditorId: null })
+      return
+    }
+    set({ packetQueue: packetQueue.slice(1) })
+  },
+  setCalculatorOpen: (calculatorOpen) => set({ calculatorOpen }),
+  toggleCalculator: () => set({ calculatorOpen: !get().calculatorOpen }),
+  setOverviewOpen: (overviewOpen) => set({ overviewOpen }),
+  toggleOverview: () => set({ overviewOpen: !get().overviewOpen }),
+  setOverviewPage: (overviewPage) => set({ overviewPage: Math.max(1, Math.round(overviewPage)) }),
   setThumbnailsOpen: (thumbnailsOpen) => set({ thumbnailsOpen }),
   setCurrentPage: (currentPage) => set({ currentPage }),
   requestPage: (page) => set({ requestedPage: page, currentPage: page }),

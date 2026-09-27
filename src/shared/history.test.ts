@@ -36,6 +36,8 @@ const project = (): DocumentProject => ({
   exportPdfPath: '/tmp/doc/notes.pdf',
   pages: [{ page: 1, source: 'original', originalPage: 1, width: 612, height: 792 }],
   annotations: [{ page: 1, annotations: [] }],
+    dayRanges: [],
+    overviewEndPage: 0,
   status: 'not_started',
   createdAt: '2026-09-16T12:00:00.000Z',
   updatedAt: '2026-09-16T12:00:00.000Z',

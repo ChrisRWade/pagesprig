@@ -1,0 +1,85 @@
+.pane {
+  grid-row: 1;
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: color-mix(in srgb, var(--tray) 72%, var(--paper));
+  border-right: 1px solid var(--hairline);
+  animation: slideIn var(--duration-panel) var(--ease-move);
+}
+
+.top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px 8px;
+}
+
+.kicker {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.top strong {
+  display: block;
+  font-size: 16px;
+}
+
+.top span {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--graphite);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.stage {
+  min-height: 0;
+  display: grid;
+  place-items: start center;
+  overflow: auto;
+  padding: 8px 12px 12px;
+}
+
+.sheet {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 12px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -36,4 +36,6 @@ npm run build
 
 ## Releases
 
-Tag a version such as `v0.1.1`. GitHub Actions builds unsigned Windows installers and attaches them to the GitHub Release.
+Bump `version` in `package.json` (and `APP_VERSION` in `src/shared/constants.ts` to match). Tag `vX.Y.Z` and push the tag. GitHub Actions builds unsigned Windows and Linux Mint installers and attaches them to the GitHub Release.
+
+Do not reuse an old tag. Each update needs a new version so the installer can replace the previous one.

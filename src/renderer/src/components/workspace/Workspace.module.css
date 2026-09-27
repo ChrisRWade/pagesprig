@@ -9,7 +9,29 @@
   position: relative;
   display: grid;
   grid-template-rows: 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.withOverview {
+  grid-template-columns: minmax(240px, 0.92fr) minmax(0, 1.18fr);
+}
+
+.viewer {
+  position: relative;
+  grid-row: 1;
+  grid-column: 1 / -1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.withOverview .viewer {
+  grid-column: 2;
+}
+
+.stage > footer {
+  grid-row: 2;
+  grid-column: 1 / -1;
 }

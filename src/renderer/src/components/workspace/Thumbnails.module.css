@@ -88,3 +88,15 @@
   background: color-mix(in srgb, var(--danger) 10%, var(--paper));
   transform: scale(1.06);
 }
+
+.day {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.overview {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brand-navy);
+}

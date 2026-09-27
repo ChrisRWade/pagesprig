@@ -49,6 +49,30 @@
   padding: 0 8px;
 }
 
+.days {
+  display: flex;
+  gap: 4px;
+  max-width: 240px;
+  overflow: auto;
+}
+
+.day,
+.dayOn {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--graphite);
+  font-size: 13px;
+}
+
+.dayOn {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .notesWrap {
   position: relative;
 }

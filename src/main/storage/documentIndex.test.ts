@@ -22,6 +22,8 @@ function sample(dir: string, id: string, title: string): DocumentProject {
     exportPdfPath: path.join(dir, `${title}.pdf`),
     pages: [{ page: 1, source: 'original', originalPage: 1, width: 612, height: 792 }],
     annotations: [{ page: 1, annotations: [] }],
+    dayRanges: [],
+    overviewEndPage: 0,
     status: 'in_progress',
     createdAt,
     updatedAt: createdAt,

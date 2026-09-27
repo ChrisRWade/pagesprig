@@ -112,6 +112,18 @@ export interface PageAnnotations {
 
 export type DocumentStatus = 'not_started' | 'in_progress' | 'completed'
 
+export interface PacketDay {
+  date: string
+  startPage: number
+  endPage: number
+  /** Set when a parent has checked this day's work. */
+  reviewedAt?: string
+  /** Optional count of questions on this day's work. */
+  questionCount?: number
+  /** How many of those questions were correct. */
+  correctCount?: number
+}
+
 export interface DocumentProject {
   version: number
   id: string
@@ -125,6 +137,9 @@ export interface DocumentProject {
   exportPdfPath: string
   pages: PageSpec[]
   annotations: PageAnnotations[]
+  dayRanges: PacketDay[]
+  /** Last page of the lesson overview, or 0 when the packet has none. */
+  overviewEndPage: number
   status: DocumentStatus
   createdAt: string
   updatedAt: string
@@ -148,6 +163,8 @@ export interface DocumentSummary {
   lastOpenedAt: string
   lastExportedAt?: string | null
   pageCount: number
+  dayRanges: PacketDay[]
+  overviewEndPage: number
 }
 
 export interface Subject {

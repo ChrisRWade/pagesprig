@@ -4,8 +4,10 @@ import { APP_NAME } from '@shared/constants'
 import { AppHeader } from './components/chrome/AppHeader'
 import { BrandLockup } from './components/chrome/Brand'
 import { StudentPicker } from './components/chrome/StudentPicker'
+import { PacketSetup } from './components/packet/PacketSetup'
 import { RecoveryScreen } from './components/recovery/RecoveryScreen'
 import { RecentDocuments } from './components/recent/RecentDocuments'
+import { ReviewScreen } from './components/review/ReviewScreen'
 import { SettingsScreen } from './components/settings/SettingsScreen'
 import { SetupWizard } from './components/setup/SetupWizard'
 import { TodayView } from './components/today/TodayView'
@@ -14,7 +16,7 @@ import { Button } from './components/shared/Button'
 import { ToastHost } from './components/shared/ToastHost'
 import { useKeyboard, useSessionHeartbeat } from './hooks/useInput'
 import { useAutosave } from './services/autosave'
-import { openProject, ensureReadable, refreshDocuments, useCatalogDocuments } from './services/documents'
+import { openProject, openSummary, ensureReadable, refreshDocuments, useCatalogDocuments } from './services/documents'
 import { useAppStore } from './stores/appStore'
 import { useDocumentStore } from './stores/documentStore'
 import styles from './App.module.css'
@@ -24,6 +26,9 @@ export default function App() {
   const settings = useAppStore((state) => state.settings)
   const documents = useCatalogDocuments()
   const pendingDrop = useAppStore((state) => state.pendingDrop)
+  const packetQueue = useAppStore((state) => state.packetQueue)
+  const packetEditorId = useAppStore((state) => state.packetEditorId)
+  const packetId = packetEditorId ?? packetQueue[0] ?? null
   const activeId = useDocumentStore((state) => state.activeId)
 
   useAutosave()
@@ -33,6 +38,13 @@ export default function App() {
   useEffect(() => {
     void bootstrap()
   }, [])
+
+  useEffect(() => {
+    if (!packetId) return
+    if (useDocumentStore.getState().open[packetId]) return
+    const summary = documents.find((item) => item.id === packetId)
+    if (summary) void openSummary(summary)
+  }, [documents, packetId])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -65,6 +77,8 @@ export default function App() {
       return
     }
     await refreshDocuments()
+    const packetIds = result.data.filter((item) => item.pages.length > 1).map((item) => item.id)
+    if (packetIds.length > 0) useAppStore.getState().enqueuePackets(packetIds)
     let opened = false
     for (const project of result.data) {
       if (!opened) {
@@ -105,11 +119,12 @@ export default function App() {
       {view === 'picker' && <StudentPicker />}
       {view === 'settings' && <SettingsScreen />}
       {view === 'recent' && <RecentDocuments />}
+      {view === 'review' && <ReviewScreen />}
       {view === 'main' && student && (
         <div className={styles.shell}>
           <AppHeader />
           <div className={styles.body}>
-            {activeId ? (
+            {packetId ? null : activeId ? (
               <Workspace />
             ) : (
               <TodayView student={student} subjectId={settings.selectedSubjectId ?? ''} documents={documents} />
@@ -123,7 +138,8 @@ export default function App() {
           <div className={styles.dialog}>
             <h2 id="drop-title">Add {pendingDrop.length === 1 ? 'this worksheet' : 'these worksheets'}?</h2>
             <p>
-              {student.name} · {subject.name} · today
+              {student.name} · {subject.name} · today. If it is a multi-page packet, you can split it into school days
+              next.
             </p>
             <div className={styles.actions}>
               <Button onClick={() => void importFiles(pendingDrop)}>Add</Button>
@@ -134,6 +150,7 @@ export default function App() {
           </div>
         </div>
       )}
+      {packetId && <PacketSetup projectId={packetId} />}
     </div>
   )
 }
