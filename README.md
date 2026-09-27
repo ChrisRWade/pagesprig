@@ -82,7 +82,7 @@ Kids and parents should install from GitHub Releases, not from the source code.
 
 1. Open [Releases](https://github.com/ChrisRWade/pagesprig/releases).
 2. Download the installer for that computer:
-   - **Windows:** `PageSprig-*-win-x64.exe` (skip the file whose name includes `portable` unless you want a USB copy). The current public build is still named `StudyPDF-0.1.0-win-x64.exe`.
+   - **Windows:** `PageSprig-*-win-x64.exe` (skip the file whose name includes `portable` unless you want a USB copy).
    - **Linux Mint:** `PageSprig-*-linux-amd64.deb`
 3. Install it:
    - **Windows:** run the installer. Unsigned builds may show a SmartScreen warning; choose **More info**, then **Run anyway**.

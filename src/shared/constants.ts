@@ -1,6 +1,6 @@
 export const APP_NAME = 'PageSprig'
 export const APP_ID = 'org.pagesprig.app'
-export const APP_VERSION = '0.1.0'
+export const APP_VERSION = '0.2.0'
 export const LEGACY_USER_DATA_NAMES = ['study-pdf', 'StudyPDF'] as const
 
 export const SETTINGS_VERSION = 1
