@@ -1,5 +1,14 @@
 import { create } from 'zustand'
-import { DEFAULT_TOOL_COLORS, ZOOM_LEVELS, type ColorableTool, type MarkSize } from '@shared/constants'
+import {
+  clampPencilWidth,
+  clampTextSize,
+  DEFAULT_PENCIL_WIDTH_PT,
+  DEFAULT_TEXT_SIZE_PT,
+  DEFAULT_TOOL_COLORS,
+  ZOOM_LEVELS,
+  type ColorableTool,
+  type MarkSize
+} from '@shared/constants'
 import type { AppSettings, DocumentSummary, RecoveryInfo, ToolId } from '@shared/types'
 import { defaultSettings, settingsNeedSetup } from '@shared/settingsSchema'
 import { createId } from '@shared/utils'
@@ -21,6 +30,8 @@ interface AppState {
   shapeTool: Extract<ToolId, 'rect' | 'ellipse' | 'arrow' | 'checkmark' | 'xmark'>
   zoom: number
   markSize: MarkSize
+  pencilWidthPt: number
+  textSizePt: number
   toolColors: Record<ColorableTool, string>
   error: string | null
   saveError: string | null
@@ -45,6 +56,8 @@ interface AppState {
   setShapeTool: (tool: AppState['shapeTool']) => void
   setZoom: (zoom: number) => void
   setMarkSize: (size: MarkSize) => void
+  setPencilWidth: (widthPt: number) => void
+  setTextSize: (sizePt: number) => void
   setToolColor: (tool: ColorableTool, color: string) => void
   zoomIn: () => void
   zoomOut: () => void
@@ -94,6 +107,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   shapeTool: 'rect',
   zoom: 1,
   markSize: 'large',
+  pencilWidthPt: DEFAULT_PENCIL_WIDTH_PT,
+  textSizePt: DEFAULT_TEXT_SIZE_PT,
   toolColors: { ...DEFAULT_TOOL_COLORS },
   error: null,
   saveError: null,
@@ -121,6 +136,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setShapeTool: (shapeTool) => set({ shapeTool, tool: shapeTool }),
   setZoom: (zoom) => set({ zoom: nearestZoom(zoom) }),
   setMarkSize: (markSize) => set({ markSize }),
+  setPencilWidth: (widthPt) => set({ pencilWidthPt: clampPencilWidth(widthPt) }),
+  setTextSize: (sizePt) => set({ textSizePt: clampTextSize(sizePt) }),
   setToolColor: (tool, color) =>
     set((state) => ({
       toolColors: { ...state.toolColors, [tool]: color }

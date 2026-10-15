@@ -40,6 +40,17 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    return window.studyApi.onDocumentsUpdated((documents) => {
+      const current = useAppStore.getState().documents
+      const merged = documents.map((item) => {
+        const existing = current.find((doc) => doc.id === item.id)
+        return existing && existing.updatedAt > item.updatedAt ? existing : item
+      })
+      useAppStore.getState().setDocuments(merged)
+    })
+  }, [])
+
+  useEffect(() => {
     if (!packetId) return
     if (useDocumentStore.getState().open[packetId]) return
     const summary = documents.find((item) => item.id === packetId)
@@ -120,19 +131,19 @@ export default function App() {
       {view === 'settings' && <SettingsScreen />}
       {view === 'recent' && <RecentDocuments />}
       {view === 'review' && <ReviewScreen />}
-      {view === 'main' && student && (
+      {view === 'main' && (student || activeId) && (
         <div className={styles.shell}>
           <AppHeader />
           <div className={styles.body}>
             {packetId ? null : activeId ? (
               <Workspace />
-            ) : (
+            ) : student ? (
               <TodayView student={student} subjectId={settings.selectedSubjectId ?? ''} documents={documents} />
-            )}
+            ) : null}
           </div>
         </div>
       )}
-      {view === 'main' && !student && <StudentPicker />}
+      {view === 'main' && !student && !activeId && <StudentPicker />}
       {pendingDrop.length > 0 && student && subject && (
         <div className={styles.modal} role="dialog" aria-labelledby="drop-title">
           <div className={styles.dialog}>

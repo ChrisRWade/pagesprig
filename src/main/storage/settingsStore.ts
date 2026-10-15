@@ -4,6 +4,7 @@ import { ANNOTATIONS_FILE, LEGACY_USER_DATA_NAMES } from '@shared/constants'
 import { parseSettings, defaultSettings, shouldAdoptLegacySettings, shouldKeepExistingSettings } from '@shared/settingsSchema'
 import type { AppSettings } from '@shared/types'
 import { atomicWriteFile, readTextIfExists } from './atomic'
+import { publishSubjectCatalog } from './subjectCatalogStore'
 
 export function settingsPath(): string {
   return path.join(app.getPath('userData'), 'settings.json')
@@ -38,6 +39,7 @@ export async function loadSettings(): Promise<AppSettings> {
       return saveSettings(legacy)
     }
   }
+  await publishSubjectCatalog(current)
   return current
 }
 
@@ -45,9 +47,11 @@ export async function saveSettings(settings: AppSettings): Promise<AppSettings> 
   const parsed = parseSettings(settings)
   const existing = await readParsedSettings(settingsPath())
   if (existing && shouldKeepExistingSettings(existing, parsed)) {
+    await publishSubjectCatalog(existing)
     return existing
   }
   await atomicWriteFile(settingsPath(), `${JSON.stringify(parsed, null, 2)}\n`)
+  await publishSubjectCatalog(parsed)
   return parsed
 }
 

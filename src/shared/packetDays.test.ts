@@ -13,10 +13,12 @@ import {
   parsePacketDays,
   pushRemainingDays,
   rangesFromStartPages,
+  rangeForDate,
   remapRangesAfterPageRemoval,
   schoolDaysFrom,
   setDayReview,
   setHasOverview,
+  shouldMaterializePacket,
   toggleStartPage
 } from './packetDays'
 
@@ -190,5 +192,31 @@ describe('packet days', () => {
     const cleared = setDayReview(tooHigh, '2026-09-21', { questionCount: null })
     expect(cleared[0].questionCount).toBeUndefined()
     expect(cleared[0].correctCount).toBeUndefined()
+  })
+
+  it('splits a packet into day files only after more than one day or an overview is confirmed', () => {
+    expect(shouldMaterializePacket([{ date: '2026-10-12' }], 0, 'worksheet')).toBe(false)
+    expect(shouldMaterializePacket([{ date: '2026-10-12' }, { date: '2026-10-13' }], 0)).toBe(true)
+    expect(shouldMaterializePacket([{ date: '2026-10-12' }], 2)).toBe(true)
+    expect(shouldMaterializePacket([{ date: '2026-10-12' }, { date: '2026-10-13' }], 2, 'packet')).toBe(false)
+    expect(shouldMaterializePacket([{ date: '2026-10-12' }], 2, 'day')).toBe(false)
+  })
+
+  it('shows one day of an unsplit packet without pulling in the other days', () => {
+    const packet = {
+      date: '2026-10-12',
+      pageCount: 16,
+      dayRanges: [
+        { date: '2026-10-12', startPage: 1, endPage: 4 },
+        { date: '2026-10-13', startPage: 5, endPage: 8 },
+        { date: '2026-10-14', startPage: 9, endPage: 12 },
+        { date: '2026-10-15', startPage: 13, endPage: 16 }
+      ]
+    }
+    expect(appearsOnDate(packet, '2026-10-15')).toBe(true)
+    expect(appearsOnDate(packet, '2026-10-16')).toBe(false)
+    expect(rangeForDate(packet, '2026-10-15')).toMatchObject({ startPage: 13, endPage: 16 })
+    expect(pageSpanLabel(rangeForDate(packet, '2026-10-15')!)).toBe('pp. 13–16')
+    expect(packetDayLabel(packet.dayRanges, '2026-10-15')).toBe('Day 4 of 4')
   })
 })

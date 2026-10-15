@@ -71,13 +71,34 @@ function drawNoteBackground(pdfPage: PDFPage, spec: PageSpec): void {
   }
 }
 
-function svgPath(points: Point[], spec: PageSpec): string {
+function toSvg(point: Point, spec: PageSpec): Point {
+  return { x: point.x * spec.width, y: point.y * spec.height }
+}
+
+function polylinePath(points: Point[], spec: PageSpec): string {
   return points
     .map((point, index) => {
-      const pdf = toPdf(point, spec)
-      return `${index === 0 ? 'M' : 'L'} ${pdf.x.toFixed(2)} ${pdf.y.toFixed(2)}`
+      const svg = toSvg(point, spec)
+      return `${index === 0 ? 'M' : 'L'} ${svg.x.toFixed(2)} ${svg.y.toFixed(2)}`
     })
     .join(' ')
+}
+
+function strokeSvgPath(
+  pdfPage: PDFPage,
+  path: string,
+  spec: PageSpec,
+  options: { borderColor: RGB; borderOpacity: number; borderWidth: number }
+): void {
+  // pdf-lib treats SVG paths as y-down and flips them around options.y.
+  pdfPage.drawSvgPath(path, {
+    x: 0,
+    y: spec.height,
+    borderColor: options.borderColor,
+    borderOpacity: options.borderOpacity,
+    borderWidth: options.borderWidth,
+    borderLineCap: 1
+  })
 }
 
 async function drawAnnotation(
@@ -96,11 +117,10 @@ async function drawAnnotation(
     case 'stroke':
     case 'highlight': {
       if (annotation.points.length < 2) return
-      pdfPage.drawSvgPath(svgPath(annotation.points, spec), {
+      strokeSvgPath(pdfPage, polylinePath(annotation.points, spec), spec, {
         borderColor: color,
         borderOpacity: opacity,
-        borderWidth,
-        borderLineCap: 1
+        borderWidth
       })
       return
     }
@@ -162,34 +182,39 @@ async function drawAnnotation(
     }
     case 'checkmark': {
       const size = annotation.size
-      const start = toPdf({ x: annotation.x, y: annotation.y + size * 0.55 }, spec)
-      const mid = toPdf({ x: annotation.x + size * 0.32, y: annotation.y + size }, spec)
-      const end = toPdf({ x: annotation.x + size, y: annotation.y }, spec)
-      pdfPage.drawSvgPath(
+      const start = toSvg({ x: annotation.x, y: annotation.y + size * 0.55 }, spec)
+      const mid = toSvg({ x: annotation.x + size * 0.32, y: annotation.y + size }, spec)
+      const end = toSvg({ x: annotation.x + size, y: annotation.y }, spec)
+      strokeSvgPath(
+        pdfPage,
         `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${mid.x.toFixed(2)} ${mid.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`,
+        spec,
         {
           borderColor: color,
           borderOpacity: opacity,
-          borderWidth: Math.max(borderWidth * markStrokeFactor(size), 1.6),
-          borderLineCap: 1
+          borderWidth: Math.max(borderWidth * markStrokeFactor(size), 1.6)
         }
       )
       return
     }
     case 'xmark': {
       const size = annotation.size
-      const topLeft = toPdf({ x: annotation.x, y: annotation.y }, spec)
-      const topRight = toPdf({ x: annotation.x + size, y: annotation.y }, spec)
-      const bottomLeft = toPdf({ x: annotation.x, y: annotation.y + size }, spec)
-      const bottomRight = toPdf({ x: annotation.x + size, y: annotation.y + size }, spec)
+      const topLeft = toSvg({ x: annotation.x, y: annotation.y }, spec)
+      const topRight = toSvg({ x: annotation.x + size, y: annotation.y }, spec)
+      const bottomLeft = toSvg({ x: annotation.x, y: annotation.y + size }, spec)
+      const bottomRight = toSvg({ x: annotation.x + size, y: annotation.y + size }, spec)
       const markWidth = Math.max(borderWidth * markStrokeFactor(size), 1.6)
-      pdfPage.drawSvgPath(
+      strokeSvgPath(
+        pdfPage,
         `M ${topLeft.x.toFixed(2)} ${topLeft.y.toFixed(2)} L ${bottomRight.x.toFixed(2)} ${bottomRight.y.toFixed(2)}`,
-        { borderColor: color, borderOpacity: opacity, borderWidth: markWidth, borderLineCap: 1 }
+        spec,
+        { borderColor: color, borderOpacity: opacity, borderWidth: markWidth }
       )
-      pdfPage.drawSvgPath(
+      strokeSvgPath(
+        pdfPage,
         `M ${topRight.x.toFixed(2)} ${topRight.y.toFixed(2)} L ${bottomLeft.x.toFixed(2)} ${bottomLeft.y.toFixed(2)}`,
-        { borderColor: color, borderOpacity: opacity, borderWidth: markWidth, borderLineCap: 1 }
+        spec,
+        { borderColor: color, borderOpacity: opacity, borderWidth: markWidth }
       )
       return
     }

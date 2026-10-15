@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   clampOverviewEnd,
   isOverviewPage,
@@ -16,9 +16,26 @@ interface Props {
 
 export function OverviewPane({ project }: Props) {
   const requested = useAppStore((state) => state.overviewPage)
-  const end = clampOverviewEnd(project.overviewEndPage ?? 0, project.pages.length)
+  const external = (project.overviewPageCount ?? 0) > 0 && Boolean(project.overviewPdfPath)
+  const end = external
+    ? (project.overviewPageCount ?? 0)
+    : clampOverviewEnd(project.overviewEndPage ?? 0, project.pages.length)
   const page = Math.min(end, Math.max(1, requested))
-  const spec = project.pages.find((item) => item.page === page) ?? project.pages[0]
+  const spec = useMemo(
+    () =>
+      external
+        ? {
+            page,
+            source: 'original' as const,
+            originalPage: page,
+            width: project.pages[0]?.width ?? 612,
+            height: project.pages[0]?.height ?? 792
+          }
+        : (project.pages.find((item) => item.page === page) ?? project.pages[0]),
+    [external, page, project.pages]
+  )
+  const pdfPath = external ? project.overviewPdfPath! : project.sourcePdfPath
+  const pdfId = external ? `${project.id}:overview` : project.id
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [width, setWidth] = useState(280)
@@ -48,11 +65,11 @@ export function OverviewPane({ project }: Props) {
     const run = async () => {
       try {
         if (spec.source === 'original' && spec.originalPage) {
-          const pdf = await loadPdfDocument(project.id, project.sourcePdfPath)
+          const pdf = await loadPdfDocument(pdfId, pdfPath)
           if (cancelled || !canvasRef.current) return
           await renderPdfPage(pdf, spec.originalPage, canvasRef.current, width, {
             priority: 0,
-            cacheId: `${project.id}:${spec.originalPage}`
+            cacheId: `${pdfId}:${spec.originalPage}`
           })
         } else {
           renderNotePage(canvas, spec.source, width, height)
@@ -67,7 +84,7 @@ export function OverviewPane({ project }: Props) {
     return () => {
       cancelled = true
     }
-  }, [end, page, project.id, project.sourcePdfPath, spec, width])
+  }, [end, external, page, pdfId, pdfPath, project.id, project.sourcePdfPath, spec, width])
 
   if (end <= 0 || !spec) return null
 

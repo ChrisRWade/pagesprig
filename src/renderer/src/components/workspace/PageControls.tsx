@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { APP_NAME, ZOOM_LEVELS } from '@shared/constants'
 import { finishedPdfState } from '@shared/exportState'
 import { isNotePageSource, type NotePageSource } from '@shared/notePages'
-import { dayRangesOf, hasLessonOverview, isMultiDay, overviewEndPageOf, pageSpanLabel } from '@shared/packetDays'
+import { dayRangesOf, isMultiDay, lessonOverviewCount, pageSpanLabel } from '@shared/packetDays'
 import { formatShortDate } from '@shared/utils'
 import type { DocumentProject } from '@shared/types'
 import { Button } from '../shared/Button'
@@ -36,7 +36,7 @@ export function PageControls({ project }: Props) {
   const ranges = dayRangesOf(project)
   const multiDay = isMultiDay(ranges)
   const canEditDays = project.pages.length > 1
-  const canOverview = hasLessonOverview(overviewEndPageOf(project), project.pages.length)
+  const canOverview = lessonOverviewCount(project) > 0
   const overviewOpen = useAppStore((state) => state.overviewOpen)
 
   useEffect(() => {

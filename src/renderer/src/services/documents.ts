@@ -1,13 +1,15 @@
 import { useMemo } from 'react'
 import { mergeDocumentCatalog, annotationsForPage } from '@shared/serialize'
 import { isNotePageSource } from '@shared/notePages'
-import { dayRangesOf, setDayReview, withDayRanges } from '@shared/packetDays'
-import { nowIso } from '@shared/utils'
+import { folderStudent, profileForWork, studentFolder } from '@shared/folderStudents'
+import { dayRangesOf, setDayReview, shouldMaterializePacket, withDayRanges } from '@shared/packetDays'
+import { createId, localIsoDate, nowIso } from '@shared/utils'
+import { DEFAULT_SUBJECTS } from '@shared/types'
+import type { DocumentProject, DocumentSummary, PacketDay, PageSource, Student } from '@shared/types'
 import { forgetPdf, loadPdfDocument } from './pdfRenderer'
 import { saveNow } from './autosave'
 import { useAppStore } from '../stores/appStore'
 import { useDocumentStore } from '../stores/documentStore'
-import type { DocumentProject, DocumentSummary, PacketDay, PageSource } from '@shared/types'
 
 export function useCatalogDocuments(): DocumentSummary[] {
   const listed = useAppStore((state) => state.documents)
@@ -80,7 +82,13 @@ export async function openSummary(
   summary: DocumentSummary,
   options?: { page?: number }
 ): Promise<void> {
-  await focusStudentAndSubject(summary.studentId, summary.subjectId)
+  const student = await ensureStudentForSummary(summary)
+  if (student) {
+    const subject = student.subjects.some((item) => item.id === summary.subjectId)
+      ? summary.subjectId
+      : student.subjects[0]?.id
+    await focusStudentAndSubject(student.id, subject)
+  }
   const loaded = await window.studyApi.loadProject(summary.projectDir)
   if (!loaded.ok) {
     useAppStore.getState().setError(loaded.error)
@@ -88,6 +96,30 @@ export async function openSummary(
   }
   const opened = await openProject(loaded.data)
   if (opened) useAppStore.getState().requestPage(options?.page ?? 1)
+}
+
+async function ensureStudentForSummary(summary: DocumentSummary): Promise<Student | null> {
+  const settings = useAppStore.getState().settings
+  const folder = studentFolder(settings.storageRoot ?? '', summary.projectDir)
+  const existing = profileForWork(settings.students, summary.studentId, folder)
+  if (existing) return existing
+  if (!folder) return null
+  const person = folderStudent(folder, settings.students, settings.students.length)
+  const created: Student = {
+    id: createId(),
+    name: folder,
+    avatar: person.avatar,
+    accentColor: person.accentColor,
+    subjects: DEFAULT_SUBJECTS,
+    createdAt: nowIso()
+  }
+  const saved = await window.studyApi.saveSettings({
+    ...useAppStore.getState().settings,
+    students: [...useAppStore.getState().settings.students, created]
+  })
+  if (!saved.ok) return null
+  useAppStore.getState().setSettings(saved.data)
+  return saved.data.students.find((item) => item.id === created.id) ?? created
 }
 
 export async function saveDayRanges(
@@ -109,6 +141,31 @@ export async function saveDayRanges(
     return false
   }
   await refreshDocuments()
+  return true
+}
+
+export async function commitPacketDays(
+  project: DocumentProject,
+  ranges: PacketDay[],
+  overviewEndPage = project.overviewEndPage ?? 0
+): Promise<boolean> {
+  if (!shouldMaterializePacket(ranges, overviewEndPage, project.role)) {
+    return saveDayRanges(project, ranges, overviewEndPage)
+  }
+  const split = await window.studyApi.splitPacket({
+    project,
+    dayRanges: ranges,
+    overviewEndPage
+  })
+  if (!split.ok) {
+    useAppStore.getState().setError(split.error)
+    return false
+  }
+  useDocumentStore.getState().closeDocument(project.id)
+  await refreshDocuments()
+  const today = localIsoDate()
+  const day = split.data.days.find((item) => item.date === today) ?? split.data.days[0]
+  if (day) await openProject(day)
   return true
 }
 

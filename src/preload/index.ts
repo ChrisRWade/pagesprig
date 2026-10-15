@@ -6,9 +6,10 @@ import type {
   ImportRequest,
   RemoveNotePageRequest,
   SaveProjectRequest,
+  SplitPacketRequest,
   StudyApi
 } from '@shared/ipc'
-import type { AppSettings, DocumentProject, SessionState } from '@shared/types'
+import type { AppSettings, DocumentProject, DocumentSummary, SessionState } from '@shared/types'
 
 const api: StudyApi = {
   selectStorageDirectory: () => ipcRenderer.invoke(IPC_CHANNELS.selectStorageDirectory),
@@ -19,6 +20,15 @@ const api: StudyApi = {
   saveProject: (request: SaveProjectRequest) => ipcRenderer.invoke(IPC_CHANNELS.saveProject, request),
   exportPdf: (request: ExportRequest) => ipcRenderer.invoke(IPC_CHANNELS.exportPdf, request),
   listDocuments: () => ipcRenderer.invoke(IPC_CHANNELS.listDocuments),
+  onDocumentsUpdated: (listener: (documents: DocumentSummary[]) => void) => {
+    const wrapped = (_event: unknown, documents: unknown): void => {
+      if (Array.isArray(documents)) listener(documents as DocumentSummary[])
+    }
+    ipcRenderer.on(IPC_CHANNELS.documentsUpdated, wrapped)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.documentsUpdated, wrapped)
+    }
+  },
   readPdf: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.readPdf, filePath),
   addNotePage: (request: AddNotePageRequest) => ipcRenderer.invoke(IPC_CHANNELS.addNotePage, request),
   removeNotePage: (request: RemoveNotePageRequest) => ipcRenderer.invoke(IPC_CHANNELS.removeNotePage, request),
@@ -32,6 +42,8 @@ const api: StudyApi = {
   openExternal: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.openExternal, filePath),
   selectPdfFiles: () => ipcRenderer.invoke(IPC_CHANNELS.selectPdfFiles),
   deleteDocument: (projectDir: string) => ipcRenderer.invoke(IPC_CHANNELS.deleteDocument, projectDir),
+  listStudentFolders: () => ipcRenderer.invoke(IPC_CHANNELS.listStudentFolders),
+  splitPacket: (request: SplitPacketRequest) => ipcRenderer.invoke(IPC_CHANNELS.splitPacket, request),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.getVersion)
 }

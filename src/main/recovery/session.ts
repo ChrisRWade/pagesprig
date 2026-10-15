@@ -54,9 +54,9 @@ export async function collectRecovery(): Promise<RecoveryInfo[]> {
   const session = await loadSession()
   if (!shouldOfferRecovery(session)) return []
   const settings = await loadSettings()
+  const documents = await listDocuments(settings)
   const infos: RecoveryInfo[] = []
   for (const documentId of session.openDocumentIds) {
-    const documents = await listDocuments(settings)
     const summary = documents.find((item) => item.id === documentId)
     if (!summary) continue
     try {

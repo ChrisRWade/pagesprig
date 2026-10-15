@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   MARK_SIZE_PRESETS,
+  MAX_PENCIL_WIDTH_PT,
+  MAX_TEXT_SIZE_PT,
+  MIN_PENCIL_WIDTH_PT,
+  MIN_TEXT_SIZE_PT,
   markStrokeFactor,
+  pencilWidthLabel,
   swatchesForTool,
   type ColorableTool,
   type MarkSize
 } from '@shared/constants'
 import type { ToolId } from '@shared/types'
 import { canRedo, canUndo } from '@shared/history'
-import { hasLessonOverview } from '@shared/packetDays'
+import { lessonOverviewCount } from '@shared/packetDays'
 import { Button } from '../shared/Button'
 import { Icons } from '../shared/Icons'
 import { useAppStore } from '../../stores/appStore'
@@ -52,12 +57,21 @@ export function Toolbar() {
   const calculatorOpen = useAppStore((state) => state.calculatorOpen)
   const overviewOpen = useAppStore((state) => state.overviewOpen)
   const project = useDocumentStore((state) => (state.activeId ? state.open[state.activeId]?.project : null))
-  const canOverview = Boolean(project && hasLessonOverview(project.overviewEndPage ?? 0, project.pages.length))
+  const canOverview = Boolean(project && lessonOverviewCount(project) > 0)
 
   return (
     <aside className={styles.rail} aria-label="Writing tools">
       {TOOLS.map((item) =>
-        COLORABLE.has(item.id) ? (
+        item.id === 'text' ? (
+          <TextSizeTool
+            key={item.id}
+            label={item.label}
+            shortcut={item.shortcut}
+            icon={item.icon}
+            active={tool === item.id}
+            onSelect={() => setTool(item.id)}
+          />
+        ) : COLORABLE.has(item.id) ? (
           <ColorTool
             key={item.id}
             id={item.id as ColorableTool}
@@ -188,7 +202,8 @@ function ColorTool({
   onSelect: () => void
 }) {
   const color = useAppStore((state) => state.toolColors[id])
-  const { open, setOpen, menu, wrapRef, showMenu, hideMenu } = useHoverMenu(72)
+  const pencilMenu = id === 'pencil'
+  const { open, setOpen, menu, wrapRef, showMenu, hideMenu } = useHoverMenu(pencilMenu ? 196 : 72)
   const swatches = swatchesForTool(id)
   const title = shortcut ? `${label} (${shortcut})` : label
 
@@ -208,7 +223,7 @@ function ColorTool({
       <Button
         variant="tool"
         active={active}
-        title={`${title}. Hover to choose a color.`}
+        title={pencilMenu ? `${title}. Hover to choose thickness and color.` : `${title}. Hover to choose a color.`}
         aria-label={title}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -220,26 +235,147 @@ function ColorTool({
       </Button>
       {open && (
         <div
-          className={styles.colorMenu}
+          className={pencilMenu ? styles.toolMenu : styles.colorMenu}
           role="menu"
-          aria-label={`${label} color`}
+          aria-label={pencilMenu ? `${label} options` : `${label} color`}
           style={{ top: menu.top, left: menu.left }}
           onMouseEnter={showMenu}
           onMouseLeave={hideMenu}
         >
-          {swatches.map((swatch) => (
-            <button
-              key={swatch.id}
-              type="button"
-              role="menuitemradio"
-              aria-checked={color === swatch.value}
-              aria-label={swatch.name}
-              title={swatch.name}
-              className={color === swatch.value ? styles.swatchOn : styles.swatch}
-              style={{ background: swatch.value }}
-              onClick={() => pick(swatch.value)}
+          {pencilMenu ? <PencilWidthControl /> : null}
+          <div className={styles.swatchRow}>
+            {swatches.map((swatch) => (
+              <button
+                key={swatch.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={color === swatch.value}
+                aria-label={swatch.name}
+                title={swatch.name}
+                className={color === swatch.value ? styles.swatchOn : styles.swatch}
+                style={{ background: swatch.value }}
+                onClick={() => pick(swatch.value)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PencilWidthControl() {
+  const width = useAppStore((state) => state.pencilWidthPt)
+  const label = pencilWidthLabel(width)
+  return (
+    <div className={styles.sliderBlock}>
+      <div className={styles.sliderHead}>
+        <span>Thickness</span>
+        <strong>{label}</strong>
+      </div>
+      <svg className={styles.strokePreview} viewBox="0 0 180 20" aria-hidden="true">
+        <path
+          d="M8 10 C 48 4, 88 16, 128 10 S 168 8, 172 10"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={Math.max(1, width * 2.2)}
+        />
+      </svg>
+      <input
+        className={styles.slider}
+        type="range"
+        min={MIN_PENCIL_WIDTH_PT}
+        max={MAX_PENCIL_WIDTH_PT}
+        step={0.1}
+        value={width}
+        aria-label="Pencil thickness"
+        aria-valuetext={`${label}, ${width} points`}
+        onChange={(event) => {
+          useAppStore.getState().setPencilWidth(Number(event.target.value))
+          useAppStore.getState().setTool('pencil')
+        }}
+      />
+      <div className={styles.sliderEnds}>
+        <span>Fine</span>
+        <span>Thick</span>
+      </div>
+    </div>
+  )
+}
+
+function TextSizeTool({
+  label,
+  shortcut,
+  icon,
+  active,
+  onSelect
+}: {
+  label: string
+  shortcut: string
+  icon: ReactNode
+  active: boolean
+  onSelect: () => void
+}) {
+  const size = useAppStore((state) => state.textSizePt)
+  const { open, menu, wrapRef, showMenu, hideMenu } = useHoverMenu(148)
+
+  return (
+    <div
+      ref={wrapRef}
+      className={styles.markWrap}
+      onMouseEnter={showMenu}
+      onMouseLeave={hideMenu}
+    >
+      <Button
+        variant="tool"
+        active={active}
+        title={`${label} (${shortcut}). Hover to choose a size.`}
+        aria-label={`${label} (${shortcut})`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onSelect}
+      >
+        {icon}
+        <span>{label}</span>
+      </Button>
+      {open && (
+        <div
+          className={styles.toolMenu}
+          role="menu"
+          aria-label="Type size"
+          style={{ top: menu.top, left: menu.left }}
+          onMouseEnter={showMenu}
+          onMouseLeave={hideMenu}
+        >
+          <div className={styles.sliderBlock}>
+            <div className={styles.sliderHead}>
+              <span>Size</span>
+              <strong>{size}</strong>
+            </div>
+            <span className={styles.typePreview} style={{ fontSize: 8 + ((size - MIN_TEXT_SIZE_PT) / (MAX_TEXT_SIZE_PT - MIN_TEXT_SIZE_PT)) * 16 }}>
+              Aa
+            </span>
+            <input
+              className={styles.slider}
+              type="range"
+              min={MIN_TEXT_SIZE_PT}
+              max={MAX_TEXT_SIZE_PT}
+              step={1}
+              value={size}
+              aria-label="Text size"
+              aria-valuetext={`${size} points`}
+              onChange={(event) => {
+                useAppStore.getState().setTextSize(Number(event.target.value))
+                onSelect()
+              }}
             />
-          ))}
+            <div className={styles.sliderEnds}>
+              <span>Small</span>
+              <span>Large</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

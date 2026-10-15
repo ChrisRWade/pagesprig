@@ -1,6 +1,6 @@
 export const APP_NAME = 'PageSprig'
 export const APP_ID = 'org.pagesprig.app'
-export const APP_VERSION = '0.2.0'
+export const APP_VERSION = '0.2.2'
 export const LEGACY_USER_DATA_NAMES = ['study-pdf', 'StudyPDF'] as const
 
 export const SETTINGS_VERSION = 1
@@ -25,9 +25,13 @@ export const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const
 export const LETTER_WIDTH_PT = 612
 export const LETTER_HEIGHT_PT = 792
 
+export const MIN_PENCIL_WIDTH_PT = 0.5
+export const MAX_PENCIL_WIDTH_PT = 4
 export const DEFAULT_PENCIL_WIDTH_PT = 1.6
 export const DEFAULT_HIGHLIGHT_WIDTH_PT = 14
 export const DEFAULT_SHAPE_WIDTH_PT = 2
+export const MIN_TEXT_SIZE_PT = 8
+export const MAX_TEXT_SIZE_PT = 28
 export const DEFAULT_TEXT_SIZE_PT = 16
 export const TEXT_FONT_STACK = 'Atkinson Hyperlegible, Segoe UI, sans-serif'
 export const TEXT_LINE_HEIGHT = 1.25
@@ -76,6 +80,24 @@ export const DEFAULT_TOOL_COLORS: Record<ColorableTool, string> = {
   arrow: SHAPE_COLOR
 }
 
+export function clampPencilWidth(pt: number): number {
+  if (!Number.isFinite(pt)) return DEFAULT_PENCIL_WIDTH_PT
+  return Math.min(MAX_PENCIL_WIDTH_PT, Math.max(MIN_PENCIL_WIDTH_PT, Math.round(pt * 10) / 10))
+}
+
+export function pencilWidthLabel(pt: number): string {
+  const width = clampPencilWidth(pt)
+  if (width <= 0.9) return 'Fine'
+  if (width <= 1.4) return 'Thin'
+  if (width <= 2.2) return 'Medium'
+  return 'Thick'
+}
+
+export function clampTextSize(pt: number): number {
+  if (!Number.isFinite(pt)) return DEFAULT_TEXT_SIZE_PT
+  return Math.min(MAX_TEXT_SIZE_PT, Math.max(MIN_TEXT_SIZE_PT, Math.round(pt)))
+}
+
 export function isColorableTool(tool: string): tool is ColorableTool {
   return tool in DEFAULT_TOOL_COLORS
 }
@@ -103,6 +125,7 @@ export const ORIGINAL_PDF_FILE = 'original.pdf'
 export const RECOVERY_DIR = '.recovery'
 export const INDEX_FILE = '.pagesprig-index.json'
 export const LEGACY_INDEX_FILE = '.studypdf-index.json'
+export const SUBJECTS_FILE = '.pagesprig-subjects.json'
 
 export const ERROR_CODES = {
   INVALID_PDF: 'INVALID_PDF',

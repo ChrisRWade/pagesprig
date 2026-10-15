@@ -3,6 +3,7 @@ import type {
   AppSettings,
   DocumentProject,
   DocumentSummary,
+  PacketDay,
   PageSource,
   RecoveryInfo,
   SessionState
@@ -54,6 +55,17 @@ export interface RemoveNotePageRequest {
   page: number
 }
 
+export interface SplitPacketRequest {
+  project: DocumentProject
+  dayRanges: PacketDay[]
+  overviewEndPage: number
+}
+
+export interface SplitPacketResult {
+  packet: DocumentProject
+  days: DocumentProject[]
+}
+
 export interface StudyApi {
   selectStorageDirectory: () => Promise<IpcResult<string>>
   getSettings: () => Promise<IpcResult<AppSettings>>
@@ -63,6 +75,7 @@ export interface StudyApi {
   saveProject: (request: SaveProjectRequest) => Promise<IpcResult<DocumentProject>>
   exportPdf: (request: ExportRequest) => Promise<IpcResult<DocumentProject>>
   listDocuments: () => Promise<IpcResult<DocumentSummary[]>>
+  onDocumentsUpdated: (listener: (documents: DocumentSummary[]) => void) => () => void
   readPdf: (filePath: string) => Promise<IpcResult<Uint8Array>>
   addNotePage: (request: AddNotePageRequest) => Promise<IpcResult<DocumentProject>>
   removeNotePage: (request: RemoveNotePageRequest) => Promise<IpcResult<DocumentProject>>
@@ -75,6 +88,8 @@ export interface StudyApi {
   openExternal: (filePath: string) => Promise<IpcResult<void>>
   selectPdfFiles: () => Promise<IpcResult<string[]>>
   deleteDocument: (projectDir: string) => Promise<IpcResult<void>>
+  listStudentFolders: () => Promise<IpcResult<{ name: string; dir: string }[]>>
+  splitPacket: (request: SplitPacketRequest) => Promise<IpcResult<SplitPacketResult>>
   getPathForFile: (file: File) => string
   getVersion: () => Promise<string>
 }
@@ -88,6 +103,7 @@ export const IPC_CHANNELS = {
   saveProject: 'docs:save',
   exportPdf: 'docs:export',
   listDocuments: 'docs:list',
+  documentsUpdated: 'docs:updated',
   readPdf: 'docs:readPdf',
   addNotePage: 'docs:addNotePage',
   removeNotePage: 'docs:removeNotePage',
@@ -100,5 +116,7 @@ export const IPC_CHANNELS = {
   openExternal: 'shell:openExternal',
   selectPdfFiles: 'docs:selectPdfs',
   deleteDocument: 'docs:delete',
+  listStudentFolders: 'docs:studentFolders',
+  splitPacket: 'docs:splitPacket',
   getVersion: 'app:version'
 } as const

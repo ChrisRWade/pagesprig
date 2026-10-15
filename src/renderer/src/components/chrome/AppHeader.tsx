@@ -22,7 +22,20 @@ export function AppHeader() {
   const saveStatus = active?.saveStatus ?? 'idle'
   const exportStatus = active?.exportStatus ?? 'idle'
 
-  if (!student) return null
+  if (!student) {
+    return (
+      <header className={styles.header}>
+        <div className={styles.left}>
+          <BrandLockup size="sm" wordmark={false} />
+        </div>
+        <div className={styles.right}>
+          <Button variant="ghost" onClick={() => setView('review')}>
+            Review
+          </Button>
+        </div>
+      </header>
+    )
+  }
 
   const selectStudent = async (id: string) => {
     const nextStudent = settings.students.find((item) => item.id === id)

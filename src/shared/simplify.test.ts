@@ -24,6 +24,14 @@ describe('stroke simplification', () => {
     ]
     expect(simplifyStroke(points, 0.001)).toHaveLength(3)
   })
+
+  it('the default highlighter simplify flattens a small handwritten loop', () => {
+    const loop = Array.from({ length: 16 }, (_, index) => {
+      const t = (index / 15) * Math.PI
+      return { x: 0.4 + 0.01 * Math.cos(t), y: 0.5 + 0.008 * Math.sin(t) }
+    })
+    expect(simplifyStroke(loop).length).toBeLessThan(loop.length)
+  })
 })
 
 describe('autosave debounce', () => {

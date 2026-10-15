@@ -158,6 +158,7 @@ export function parseDocumentProject(value: unknown): DocumentProject | null {
     id: value.id as string,
     studentId: value.studentId as string,
     subjectId: value.subjectId as string,
+    subjectName: isString(value.subjectName) ? value.subjectName : null,
     date,
     title: value.title as string,
     originalFilename: value.originalFilename as string,
@@ -170,6 +171,10 @@ export function parseDocumentProject(value: unknown): DocumentProject | null {
       .filter((item): item is PageAnnotations => item !== null),
     dayRanges: parsePacketDays(value.dayRanges, date, pages.length, overviewEndPage),
     overviewEndPage,
+    role: value.role === 'packet' || value.role === 'day' || value.role === 'worksheet' ? value.role : 'worksheet',
+    overviewPdfPath: isString(value.overviewPdfPath) ? value.overviewPdfPath : null,
+    overviewPageCount: isNumber(value.overviewPageCount) ? Math.max(0, Math.round(value.overviewPageCount)) : 0,
+    packetId: isString(value.packetId) ? value.packetId : null,
     status,
     createdAt: value.createdAt as string,
     updatedAt: value.updatedAt as string,
@@ -188,6 +193,7 @@ export function toSummary(project: DocumentProject): DocumentSummary {
     id: project.id,
     studentId: project.studentId,
     subjectId: project.subjectId,
+    subjectName: project.subjectName ?? null,
     date: project.date,
     title: project.title,
     status: project.status,
@@ -200,7 +206,11 @@ export function toSummary(project: DocumentProject): DocumentSummary {
     lastExportedAt: project.lastExportedAt ?? null,
     pageCount: project.pages.length,
     dayRanges: parsePacketDays(project.dayRanges, project.date, project.pages.length, project.overviewEndPage ?? 0),
-    overviewEndPage: parseOverviewEnd(project.overviewEndPage, project.pages.length)
+    overviewEndPage: parseOverviewEnd(project.overviewEndPage, project.pages.length),
+    role: project.role ?? 'worksheet',
+    overviewPdfPath: project.overviewPdfPath ?? null,
+    overviewPageCount: project.overviewPageCount ?? 0,
+    packetId: project.packetId ?? null
   }
 }
 
@@ -210,7 +220,9 @@ export function mergeDocumentCatalog(
 ): DocumentSummary[] {
   const byId = new Map(listed.map((item) => [item.id, item]))
   for (const project of openProjects) {
-    byId.set(project.id, toSummary(project))
+    const previous = byId.get(project.id)
+    const summary = toSummary(project)
+    byId.set(project.id, { ...summary, subjectName: summary.subjectName || previous?.subjectName || null })
   }
   return [...byId.values()]
 }

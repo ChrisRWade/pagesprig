@@ -32,7 +32,7 @@ import {
   unpinCachedPages,
   warmPdfPage
 } from '../../services/pdfRenderer'
-import { saveDayRanges } from '../../services/documents'
+import { commitPacketDays } from '../../services/documents'
 import { useAppStore } from '../../stores/appStore'
 import { useDocumentStore } from '../../stores/documentStore'
 import styles from './PacketSetup.module.css'
@@ -172,7 +172,7 @@ export function PacketSetup({ projectId }: Props) {
   }
 
   const save = async (next = ranges, nextOverview = overviewEnd) => {
-    const saved = await saveDayRanges(project, next, nextOverview)
+    const saved = await commitPacketDays(project, next, nextOverview)
     if (saved) useAppStore.getState().dismissPacketSetup()
   }
 

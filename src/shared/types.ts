@@ -112,6 +112,9 @@ export interface PageAnnotations {
 
 export type DocumentStatus = 'not_started' | 'in_progress' | 'completed'
 
+/** `packet` is the untouched full lesson. `day` is one school day's pages. */
+export type DocumentRole = 'worksheet' | 'packet' | 'day'
+
 export interface PacketDay {
   date: string
   startPage: number
@@ -129,6 +132,8 @@ export interface DocumentProject {
   id: string
   studentId: string
   subjectId: string
+  /** Name captured when the worksheet was added, so other computers can show it. */
+  subjectName?: string | null
   date: string
   title: string
   originalFilename: string
@@ -140,6 +145,11 @@ export interface DocumentProject {
   dayRanges: PacketDay[]
   /** Last page of the lesson overview, or 0 when the packet has none. */
   overviewEndPage: number
+  role?: DocumentRole
+  /** Full-packet PDF used to show the lesson overview beside a day file. */
+  overviewPdfPath?: string | null
+  overviewPageCount?: number
+  packetId?: string | null
   status: DocumentStatus
   createdAt: string
   updatedAt: string
@@ -152,6 +162,7 @@ export interface DocumentSummary {
   id: string
   studentId: string
   subjectId: string
+  subjectName?: string | null
   date: string
   title: string
   status: DocumentStatus
@@ -165,6 +176,10 @@ export interface DocumentSummary {
   pageCount: number
   dayRanges: PacketDay[]
   overviewEndPage: number
+  role?: DocumentRole
+  overviewPdfPath?: string | null
+  overviewPageCount?: number
+  packetId?: string | null
 }
 
 export interface Subject {

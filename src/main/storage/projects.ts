@@ -1,18 +1,22 @@
-import { readFile, rm } from 'node:fs/promises'
+import { readFile, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { dialog } from 'electron'
-import { ERROR_CODES, PROJECT_VERSION } from '@shared/constants'
+import { DEFAULT_FOLDER_TEMPLATE, ERROR_CODES, PROJECT_VERSION } from '@shared/constants'
 import { applyTemplate, templateContext, uniqueName } from '@shared/pathTemplate'
 import { emptyPageAnnotations, serializeProject } from '@shared/serialize'
 import { expandLastRange, initialPacketSplit } from '@shared/packetDays'
+import { isStudentFolderName, profileForFolder, studentFolder } from '@shared/folderStudents'
+import { emptySubjectCatalog, resolveSubjectName, subjectFromProjectPath } from '@shared/subjectCatalog'
+import { readSubjectCatalog } from './subjectCatalogStore'
 import { isNotePageSourceValue, removeNotePageFromProject } from '@shared/notePages'
-import type { AppSettings, DocumentProject, DocumentSummary, PageSource, Student } from '@shared/types'
+import type { AppSettings, DocumentProject, DocumentSummary, PacketDay, PageSource, Student } from '@shared/types'
 import type { TextRaster } from '@shared/ipc'
 import { createId, localIsoDate, nowIso } from '@shared/utils'
 import { copyOriginalPdf, exportAnnotatedPdf, fileFingerprint, inspectPdf } from '../export/pdfExport'
+import { materializePacketFiles } from '../export/splitPacket'
 import { AppError, isInsideRoot } from './errors'
 import { atomicWriteFile, ensureDir, readTextIfExists } from './atomic'
-import { rebuildDocumentIndex, upsertIndex } from './documentIndex'
+import { forgetDocument, listCachedDocuments, rememberDocument, scheduleCatalogRefresh, setCatalogDecorator } from './catalogSync'
 import { annotationsPath, loadSettings } from './settingsStore'
 
 export { loadLatestCheckpoint, loadProjectFromDisk, writeCheckpoint } from './projectIo'
@@ -27,9 +31,37 @@ export async function selectStorageDirectory(): Promise<string | null> {
   return result.filePaths[0]
 }
 
+async function withSubjectNames(settings: AppSettings, documents: DocumentSummary[]): Promise<DocumentSummary[]> {
+  const storageRoot = settings.storageRoot ?? ''
+  const catalog = storageRoot ? await readSubjectCatalog(storageRoot) : emptySubjectCatalog()
+  return documents.map((item) => {
+    const folderName = studentFolder(storageRoot, item.projectDir)
+    const profile = folderName
+      ? profileForFolder(folderName, settings.students)
+      : settings.students.find((student) => student.id === item.studentId)
+    const localName = profile?.subjects.find((subject) => subject.id === item.subjectId)?.name ?? null
+    const pathSubject =
+      subjectFromProjectPath(storageRoot, item.projectDir, DEFAULT_FOLDER_TEMPLATE) ??
+      subjectFromProjectPath(storageRoot, item.projectDir, settings.folderTemplate)
+    const subjectName = resolveSubjectName({
+      folderName,
+      subjectId: item.subjectId,
+      recordedName: item.subjectName,
+      pathSubject,
+      catalog,
+      localName
+    })
+    return subjectName ? { ...item, subjectName } : item
+  })
+}
+
+setCatalogDecorator(withSubjectNames)
+
 export async function listDocuments(settings: AppSettings): Promise<DocumentSummary[]> {
   if (!settings.storageRoot) return []
-  return rebuildDocumentIndex(settings.storageRoot)
+  const documents = await listCachedDocuments(settings.storageRoot)
+  scheduleCatalogRefresh()
+  return withSubjectNames(settings, documents)
 }
 
 export async function saveProjectToDisk(
@@ -71,7 +103,7 @@ export async function saveProjectToDisk(
     next.fingerprint = await fileFingerprint(target)
   }
 
-  await upsertIndex(settings.storageRoot, next)
+  await rememberDocument(settings.storageRoot, next)
   return next
 }
 
@@ -127,6 +159,7 @@ export async function importPdfFiles(
         id: createId(),
         studentId,
         subjectId,
+        subjectName: subject.name,
         date,
         title: originalName,
         originalFilename: path.basename(filePath),
@@ -211,6 +244,42 @@ export async function readPdfBytes(filePath: string, storageRoot: string | null)
   return copy
 }
 
+export async function listStudentFolders(storageRoot: string): Promise<{ name: string; dir: string }[]> {
+  const entries = await readdir(storageRoot, { withFileTypes: true }).catch(() => [])
+  return entries
+    .filter((entry) => entry.isDirectory() && isStudentFolderName(entry.name))
+    .map((entry) => ({ name: entry.name, dir: path.join(storageRoot, entry.name) }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export async function commitPacketSplit(
+  project: DocumentProject,
+  ranges: PacketDay[],
+  overviewEndPage: number
+): Promise<{ packet: DocumentProject; days: DocumentProject[] }> {
+  const settings = await loadSettings()
+  if (!settings.storageRoot) {
+    throw new AppError('Choose a schoolwork folder in Settings first.', ERROR_CODES.STORAGE_UNAVAILABLE)
+  }
+  const student = settings.students.find((item) => item.id === project.studentId)
+  const studentName = student?.name || studentFolder(settings.storageRoot, project.projectDir) || 'Student'
+  const materialized = await materializePacketFiles({
+    storageRoot: settings.storageRoot,
+    studentName,
+    project,
+    ranges,
+    overviewEndPage
+  })
+  const packet = await saveProjectToDisk(materialized.packet)
+  const days: DocumentProject[] = []
+  for (const day of materialized.days) days.push(await saveProjectToDisk(day))
+  if (materialized.removeDir && isInsideRoot(settings.storageRoot, materialized.removeDir)) {
+    await rm(materialized.removeDir, { recursive: true, force: true })
+  }
+  await listDocuments(settings)
+  return { packet, days }
+}
+
 export async function deleteProject(projectDir: string): Promise<void> {
   const settings = await loadSettings()
   if (!settings.storageRoot) {
@@ -220,5 +289,6 @@ export async function deleteProject(projectDir: string): Promise<void> {
     throw new AppError('That document is outside the schoolwork folder.', ERROR_CODES.INVALID_PATH)
   }
   await rm(projectDir, { recursive: true, force: true })
+  await forgetDocument(settings.storageRoot, projectDir)
   await listDocuments(settings)
 }

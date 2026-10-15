@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DocumentSummary, Student } from '@shared/types'
 import { APP_NAME } from '@shared/constants'
-import { appearsOnDate, packetDayLabel, pageSpanLabel, rangeForDate, workDatesOf } from '@shared/packetDays'
+import { appearsOnDate, isPacketShell, packetDayLabel, pageSpanLabel, rangeForDate, workDatesOf } from '@shared/packetDays'
 import { formatDate, formatDayChip, formatShortDate, localIsoDate, schoolDayWindow } from '@shared/utils'
 import { Button } from '../shared/Button'
 import { ExportStamp } from '../shared/ExportStamp'
@@ -32,7 +32,10 @@ export function TodayView({ student, subjectId, documents }: Props) {
   const scoped = useMemo(
     () =>
       documents.filter(
-        (item) => item.studentId === student.id && (!subjectId || item.subjectId === subjectId)
+        (item) =>
+          item.studentId === student.id &&
+          !isPacketShell(item) &&
+          (!subjectId || item.subjectId === subjectId)
       ),
     [documents, student.id, subjectId]
   )

@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { DEFAULT_TEXT_SIZE_PT, TEXT_COLOR, TEXT_FONT_STACK } from '@shared/constants'
+import { DEFAULT_TEXT_SIZE_PT, TEXT_COLOR, TEXT_FONT_STACK, clampTextSize } from '@shared/constants'
 import { pdfLengthToScreen } from '@shared/coords'
 import { textPadX, textPadY } from '@shared/textLayout'
 import type { Size, TextAnnotation } from '@shared/types'
 import { createId, nowIso } from '@shared/utils'
 import { inkMapDataUrl, type PageSample } from '../../services/adaptiveText'
+import { useAppStore } from '../../stores/appStore'
 import { useDocumentStore } from '../../stores/documentStore'
 import styles from './TextEditorOverlay.module.css'
 
@@ -42,6 +43,8 @@ export function TextEditorOverlay({
   const armedRef = useRef(false)
   const applyAdd = useDocumentStore((state) => state.applyAdd)
   const applyModify = useDocumentStore((state) => state.applyModify)
+  const preferredSize = useAppStore((state) => state.textSizePt)
+  const [sizePt, setSizePt] = useState(() => clampTextSize(existing?.fontSize ?? preferredSize))
   const [inkUrl, setInkUrl] = useState<string | null>(null)
 
   const area = {
@@ -66,9 +69,17 @@ export function TextEditorOverlay({
   const top = area.y * rendered.height
   const width = Math.max(72, area.width * rendered.width)
   const height = Math.max(28, area.height * rendered.height)
-  const fontSize = pdfLengthToScreen(existing?.fontSize ?? DEFAULT_TEXT_SIZE_PT, pageSize, rendered)
+  const fontSize = pdfLengthToScreen(sizePt, pageSize, rendered)
   const padX = textPadX(fontSize)
   const padY = textPadY(fontSize)
+  const barOnTop = top >= 40
+  const barTop = barOnTop ? top - 36 : top + height + 4
+
+  const bumpSize = (delta: number) => {
+    const next = clampTextSize(sizePt + delta)
+    setSizePt(next)
+    useAppStore.getState().setTextSize(next)
+  }
 
   useLayoutEffect(() => {
     const node = textareaRef.current
@@ -94,7 +105,7 @@ export function TextEditorOverlay({
     const observer = new ResizeObserver(paint)
     observer.observe(node)
     return () => observer.disconnect()
-  }, [area.x, area.y, pageSample, rendered.height, rendered.width])
+  }, [area.x, area.y, pageSample, rendered.height, rendered.width, sizePt])
 
   const commit = () => {
     if (!armedRef.current) return
@@ -118,46 +129,62 @@ export function TextEditorOverlay({
       updatedAt: nowIso(),
       style: {
         ...(existing?.style ?? { color: TEXT_COLOR, width: DEFAULT_TEXT_SIZE_PT, opacity: 1 }),
-        color: pickContrastInk(nextBox)
+        color: pickContrastInk(nextBox),
+        width: sizePt
       },
       x: nextBox.x,
       y: nextBox.y,
       width: nextBox.width,
       height: nextBox.height,
       text: value,
-      fontSize: existing?.fontSize ?? DEFAULT_TEXT_SIZE_PT
+      fontSize: sizePt
     }
     if (existing) applyModify(documentId, existing, annotation)
     else applyAdd(documentId, annotation)
   }
 
   return (
-    <textarea
-      ref={textareaRef}
-      className={`${styles.editor}${inkUrl ? ` ${styles.adaptive}` : ''}`}
-      defaultValue={existing?.text ?? ''}
-      aria-label="Type on the worksheet"
-      style={{
-        left,
-        top,
-        width,
-        height,
-        fontSize,
-        padding: `${padY}px ${padX}px`,
-        fontFamily: TEXT_FONT_STACK,
-        color: inkUrl ? 'transparent' : ink,
-        caretColor: ink,
-        backgroundImage: inkUrl ? `url(${inkUrl})` : undefined
-      }}
-      onPointerDown={(event) => event.stopPropagation()}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          armedRef.current = false
-          onClose()
-        }
-      }}
-    />
+    <>
+      <div
+        className={styles.sizeBar}
+        style={{ left, top: barTop, width: Math.max(width, 132) }}
+        onPointerDown={(event) => event.preventDefault()}
+      >
+        <button type="button" aria-label="Smaller text" onClick={() => bumpSize(-1)}>
+          A−
+        </button>
+        <span aria-live="polite">{sizePt}</span>
+        <button type="button" aria-label="Larger text" onClick={() => bumpSize(1)}>
+          A+
+        </button>
+      </div>
+      <textarea
+        ref={textareaRef}
+        className={`${styles.editor}${inkUrl ? ` ${styles.adaptive}` : ''}`}
+        defaultValue={existing?.text ?? ''}
+        aria-label="Type on the worksheet"
+        style={{
+          left,
+          top,
+          width,
+          height,
+          fontSize,
+          padding: `${padY}px ${padX}px`,
+          fontFamily: TEXT_FONT_STACK,
+          color: inkUrl ? 'transparent' : ink,
+          caretColor: ink,
+          backgroundImage: inkUrl ? `url(${inkUrl})` : undefined
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            armedRef.current = false
+            onClose()
+          }
+        }}
+      />
+    </>
   )
 }

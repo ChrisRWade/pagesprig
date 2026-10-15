@@ -32,7 +32,8 @@ function simplifyRange(points: Point[], start: number, end: number, epsilon: num
 
 /**
  * Ramer–Douglas–Peucker simplification in normalized page space.
- * Epsilon of ~0.001 keeps handwriting readable while dropping noisy pointer jitter.
+ * Use this on fat highlighter strokes. Do not use it on pencil handwriting —
+ * the default epsilon flattens small curves after the pointer is released.
  */
 export function simplifyStroke(points: Point[], epsilon = 0.0012): Point[] {
   if (points.length <= 2) return points.slice()

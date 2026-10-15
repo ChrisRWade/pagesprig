@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { hasLessonOverview } from '@shared/packetDays'
+import { lessonOverviewCount } from '@shared/packetDays'
 import { useAppStore } from '../../stores/appStore'
 import { useDocumentStore } from '../../stores/documentStore'
 import { PdfViewer } from './PdfViewer'
@@ -28,7 +28,7 @@ export function Workspace() {
     )
   })
   const pageCount = active?.project.pages.length ?? 0
-  const canOverview = Boolean(active && hasLessonOverview(active.project.overviewEndPage ?? 0, pageCount))
+  const canOverview = Boolean(active && lessonOverviewCount(active.project) > 0)
   const showOverview = overviewOpen && canOverview
 
   useEffect(() => {

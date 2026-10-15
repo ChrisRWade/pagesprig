@@ -1,66 +1,107 @@
-import { useEffect, useMemo, useState } from 'react'
-import { calendarCells, formatMonthTitle, monthKey, shiftMonth, WEEKDAY_LABELS } from '@shared/calendar'
-import {
-  appearsOnDate,
-  dateReviewStatus,
-  dayScoreLabel,
-  packetDayLabel,
-  pageSpanLabel,
-  rangeForDate
-} from '@shared/packetDays'
-import { formatDate, localIsoDate } from '@shared/utils'
-import type { DocumentSummary, Student } from '@shared/types'
+import { useEffect, useState } from 'react'
+import { folderStudent, studentFolder, type FolderStudent } from '@shared/folderStudents'
+import { appearsOnDate, dayRangesOf, dayScoreLabel, isPacketShell, packetDayLabel, pageSpanLabel, rangeForDate } from '@shared/packetDays'
+import { formatDate, localIsoDate, shiftIsoDate } from '@shared/utils'
+import type { DocumentProject, DocumentSummary, PacketDay, Student } from '@shared/types'
 import { BrandLockup } from '../chrome/Brand'
 import { Button } from '../shared/Button'
 import { ExportStamp } from '../shared/ExportStamp'
-import { openSummary, refreshDocuments, saveDayReview, useCatalogDocuments } from '../../services/documents'
+import { refreshDocuments, saveDayReview, useCatalogDocuments } from '../../services/documents'
 import { useAppStore } from '../../stores/appStore'
+import { ReviewReader } from './ReviewReader'
 import styles from './ReviewScreen.module.css'
+
+interface Column {
+  key: string
+  person: FolderStudent
+  items: DocumentSummary[]
+}
 
 export function ReviewScreen() {
   const settings = useAppStore((state) => state.settings)
   const documents = useCatalogDocuments()
   const today = localIsoDate()
-  const [month, setMonth] = useState(monthKey(today))
   const [selected, setSelected] = useState(today)
+  const [studentKey, setStudentKey] = useState<string | null>(null)
+  const [docId, setDocId] = useState<string | null>(null)
+  const [folders, setFolders] = useState<{ name: string; dir: string }[]>([])
+  const [project, setProject] = useState<DocumentProject | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     void refreshDocuments()
+    void window.studyApi.listStudentFolders().then((result) => {
+      if (result.ok) setFolders(result.data)
+    })
   }, [])
 
-  const cells = useMemo(() => calendarCells(month), [month])
-  const byDate = useMemo(() => {
-    const map = new Map<string, DocumentSummary[]>()
-    for (const item of documents) {
-      for (const cell of cells) {
-        if (!cell.date || !appearsOnDate(item, cell.date)) continue
-        const list = map.get(cell.date) ?? []
-        list.push(item)
-        map.set(cell.date, list)
-      }
-    }
-    return map
-  }, [cells, documents])
-  const selectedItems = byDate.get(selected) ?? []
-  const grouped = settings.students
-    .map((student) => ({
-      student,
-      items: selectedItems.filter((item) => item.studentId === student.id)
-    }))
-    .filter((group) => group.items.length > 0)
+  const columns: Column[] =
+    folders.length > 0
+      ? folders.map((folder, index) => ({
+          key: folder.name,
+          person: folderStudent(folder.name, settings.students, index),
+          items: documents.filter(
+            (item) =>
+              studentFolder(settings.storageRoot ?? '', item.projectDir)?.toLowerCase() === folder.name.toLowerCase()
+          )
+        }))
+      : settings.students.map((student, index) => ({
+          key: student.id,
+          person: folderStudent(student.name, settings.students, index),
+          items: documents.filter((item) => item.studentId === student.id)
+        }))
 
-  const openItem = async (item: DocumentSummary) => {
-    const range = rangeForDate(item, selected)
-    await openSummary(item, { page: range?.startPage })
-  }
+  const column = columns.find((item) => item.key === studentKey) ?? null
+  const work = (column?.items ?? [])
+    .filter((item) => !isPacketShell(item) && appearsOnDate(item, selected))
+    .sort((a, b) => (a.subjectName ?? '').localeCompare(b.subjectName ?? '') || a.title.localeCompare(b.title))
+  const workIds = work.map((item) => item.id).join('|')
+
+  useEffect(() => {
+    setDocId((current) => {
+      const ids = workIds.split('|').filter(Boolean)
+      if (current && ids.includes(current)) return current
+      return ids[0] ?? null
+    })
+  }, [workIds])
+
+  const activeItem = work.find((item) => item.id === docId) ?? null
+
+  const activeId = activeItem?.id ?? null
+  const activeDir = activeItem?.projectDir ?? null
+
+  useEffect(() => {
+    if (!activeId || !activeDir) {
+      setProject(null)
+      setLoadError(null)
+      return
+    }
+    let cancelled = false
+    setProject(null)
+    setLoadError(null)
+    void window.studyApi.loadProject(activeDir).then((result) => {
+      if (cancelled) return
+      if (!result.ok) {
+        setProject(null)
+        setLoadError(result.error)
+        return
+      }
+      setProject(result.data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [activeId, activeDir])
+
+  const pages = project && activeItem ? pagesForDay(project, selected) : []
 
   return (
     <main className={styles.wrap}>
       <header className={styles.top}>
         <BrandLockup size="sm" />
         <div className={styles.heading}>
-          <p className={styles.kicker}>Parent review</p>
-          <h1>Who has work this month?</h1>
+          <p className={styles.kicker}>Parent dashboard</p>
+          <h1>Review</h1>
         </div>
         <Button
           variant="ghost"
@@ -70,129 +111,126 @@ export function ReviewScreen() {
         </Button>
       </header>
 
-      <div className={styles.sheet}>
-        <nav className={styles.monthNav} aria-label="Month">
-          <Button variant="ghost" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
-            ‹
-          </Button>
-          <h2>{formatMonthTitle(month)}</h2>
-          <Button variant="ghost" aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}>
-            ›
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={month === monthKey(today)}
-            onClick={() => {
-              setMonth(monthKey(today))
-              setSelected(today)
-            }}
-          >
-            This month
-          </Button>
-        </nav>
-
-        <div className={styles.legend}>
-          {settings.students.map((student) => (
-            <span key={student.id} className={styles.legendItem}>
-              <i style={{ background: student.accentColor }} aria-hidden="true" />
-              {student.avatar} {student.name}
-            </span>
-          ))}
-          <span className={styles.legendItem}>
-            <span className={styles.legendCheck} aria-hidden="true">
-              ✓
-            </span>
-            Checked
-          </span>
-        </div>
-
-        <div className={styles.grid} role="grid" aria-label={formatMonthTitle(month)}>
-          {WEEKDAY_LABELS.map((label) => (
-            <div key={label} className={styles.weekday} role="columnheader">
-              {label}
+      {columns.length === 0 ? (
+        <p className={styles.none}>No student folders yet. Add a folder for each child inside the schoolwork directory.</p>
+      ) : (
+        <div className={styles.desk}>
+          <aside className={styles.rail} aria-label="Work to check">
+            <div className={styles.students} role="group" aria-label="Student">
+              {columns.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={item.key === studentKey ? styles.studentOn : styles.studentBtn}
+                  aria-pressed={item.key === studentKey}
+                  onClick={() => setStudentKey(item.key)}
+                >
+                  <i style={{ background: item.person.accentColor }} aria-hidden="true" />
+                  {item.person.avatar} {item.person.name}
+                </button>
+              ))}
             </div>
-          ))}
-          {cells.map((cell, index) => {
-            const date = cell.date
-            if (!date) return <div key={`empty-${index}`} className={styles.empty} />
-            const items = byDate.get(date) ?? []
-            const owners = uniqueStudents(items, settings.students)
-            const on = date === selected
-            const isToday = date === today
-            const review = dateReviewStatus(items, date)
-            return (
-              <button
-                key={date}
-                type="button"
-                className={on ? styles.dayOn : styles.day}
-                aria-current={isToday ? 'date' : undefined}
-                aria-pressed={on}
-                aria-label={dayLabel(date, owners, items.length, isToday, review)}
-                onClick={() => setSelected(date)}
-              >
-                <span className={styles.dayHead}>
-                  <span className={isToday ? styles.todayNum : styles.num}>{Number(date.slice(-2))}</span>
-                  {review !== 'none' ? (
-                    <span className={review === 'all' ? styles.checkedAll : styles.checkedSome} aria-hidden="true">
-                      ✓
-                    </span>
-                  ) : null}
-                </span>
-                <span className={styles.dots}>
-                  {owners.map((student) => (
-                    <i key={student.id} style={{ background: student.accentColor }} title={student.name} />
-                  ))}
-                </span>
-              </button>
-            )
-          })}
-        </div>
 
-        <section className={styles.detail} aria-live="polite">
-          <h2>{formatDate(selected)}</h2>
-          {grouped.length === 0 ? (
-            <p className={styles.none}>No worksheets on this day.</p>
-          ) : (
-            grouped.map((group) => (
-              <section key={group.student.id} className={styles.student}>
-                <h3>
-                  <i style={{ background: group.student.accentColor }} aria-hidden="true" />
-                  {group.student.avatar} {group.student.name}
-                </h3>
-                <ul>
-                  {group.items.map((item) => (
-                    <DayReviewCard
-                      key={item.id}
-                      item={item}
-                      date={selected}
-                      subjectName={group.student.subjects.find((entry) => entry.id === item.subjectId)?.name}
-                      onOpen={() => void openItem(item)}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))
-          )}
-        </section>
-      </div>
+            {column ? (
+              <>
+                <nav className={styles.monthNav} aria-label="School day">
+                  <Button variant="ghost" aria-label="Previous day" onClick={() => setSelected(shiftIsoDate(selected, -1))}>
+                    ‹
+                  </Button>
+                  <h2>{formatDate(selected)}</h2>
+                  <Button variant="ghost" aria-label="Next day" onClick={() => setSelected(shiftIsoDate(selected, 1))}>
+                    ›
+                  </Button>
+                </nav>
+                <Button variant="ghost" disabled={selected === today} onClick={() => setSelected(today)}>
+                  Today
+                </Button>
+                {work.length === 0 ? (
+                  <p className={styles.none}>Nothing saved for this day.</p>
+                ) : (
+                  <ul className={styles.docs}>
+                    {work.map((item) => {
+                      const range = rangeForDate(item, selected)
+                      const detail = detailLabel(item, selected, column.person.profile)
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className={item.id === docId ? styles.docOn : styles.doc}
+                            aria-current={item.id === docId ? 'true' : undefined}
+                            onClick={() => setDocId(item.id)}
+                          >
+                            <span className={styles.title}>{item.title}</span>
+                            {detail ? <span className={styles.meta}>{detail}</span> : null}
+                            <span className={range?.reviewedAt ? styles.checkedMark : styles.uncheckedMark}>
+                              {range?.reviewedAt ? `Checked${dayScoreLabel(range) ? ` · ${dayScoreLabel(range)}` : ''}` : 'Not checked'}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <p className={styles.prompt}>Choose a child. Their work for this day stays in this list.</p>
+            )}
+          </aside>
+
+          <section className={styles.stage} aria-label="Worksheet">
+            {!column ? (
+              <p className={styles.prompt}>The worksheet opens here, with the marks still on the page.</p>
+            ) : !activeItem ? (
+              <p className={styles.prompt}>Nothing to open for {column.person.name} on this day.</p>
+            ) : (
+              <>
+                <header className={styles.stageHead}>
+                  <div>
+                    <h2>{activeItem.title}</h2>
+                    <p>{detailLabel(activeItem, selected, column.person.profile) || formatDate(selected)}</p>
+                  </div>
+                  <ExportStamp updatedAt={activeItem.updatedAt} lastExportedAt={activeItem.lastExportedAt} />
+                  <ReviewControls item={activeItem} date={selected} />
+                </header>
+                {loadError ? <p className={styles.none}>{loadError}</p> : null}
+                {project && pages.length > 0 ? <ReviewReader project={project} pages={pages} /> : null}
+                {project && pages.length === 0 && !loadError ? <p className={styles.none}>Opening this worksheet…</p> : null}
+                {!project && !loadError ? <p className={styles.none}>Opening this worksheet…</p> : null}
+              </>
+            )}
+          </section>
+        </div>
+      )}
     </main>
   )
 }
 
-function DayReviewCard({
-  item,
-  date,
-  subjectName,
-  onOpen
-}: {
-  item: DocumentSummary
-  date: string
-  subjectName?: string
-  onOpen: () => void
-}) {
+function pagesForDay(project: DocumentProject, date: string): number[] {
+  const range = rangeForDate(project, date)
+  const all = project.pages.map((page) => page.page)
+  if (!range) return all
+  const slice = all.filter((page) => page >= range.startPage && page <= range.endPage)
+  return slice.length > 0 ? slice : all
+}
+
+function detailLabel(item: DocumentSummary, date: string, student: Student | null): string {
   const range = rangeForDate(item, date)
-  const day = packetDayLabel(item.dayRanges, date)
-  const score = range ? dayScoreLabel(range) : null
+  const subject =
+    item.subjectName?.trim() || student?.subjects.find((entry) => entry.id === item.subjectId)?.name
+  const day = packetDayLabel(dayRangesOf(item), date)
+  const pages = sliceLabel(item, range)
+  return [subject, day, pages].filter(Boolean).join(' · ')
+}
+
+function sliceLabel(item: DocumentSummary, range: PacketDay | null): string | null {
+  if (!range || item.role === 'day') return null
+  const span = range.endPage - range.startPage + 1
+  if (span >= item.pageCount) return null
+  return pageSpanLabel(range)
+}
+
+function ReviewControls({ item, date }: { item: DocumentSummary; date: string }) {
+  const range = rangeForDate(item, date)
   const [questions, setQuestions] = useState(countDraft(range?.questionCount))
   const [correct, setCorrect] = useState(countDraft(range?.correctCount))
 
@@ -222,62 +260,44 @@ function DayReviewCard({
   }
 
   return (
-    <li>
-      <div className={styles.card}>
-        <button type="button" className={styles.row} onClick={onOpen}>
-          <span className={styles.title}>{item.title}</span>
-          <span className={styles.meta}>
-            {subjectName}
-            {day ? ` · ${day}` : ''}
-            {range ? ` · ${pageSpanLabel(range)}` : ''}
-            {score ? ` · ${score}` : ''}
-            <ExportStamp updatedAt={item.updatedAt} lastExportedAt={item.lastExportedAt} />
-          </span>
-        </button>
-        <div className={styles.reviewRow}>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={Boolean(range?.reviewedAt)}
-              onChange={(event) => void saveDayReview(item, date, { reviewed: event.target.checked })}
-            />
-            Checked
-          </label>
-          <div className={styles.score}>
-            <span>Score</span>
-            <input
-              className={styles.count}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              aria-label="Correct answers"
-              value={correct}
-              onChange={(event) => setCorrect(event.target.value)}
-              onBlur={() => void commitScore()}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.currentTarget.blur()
-                }
-              }}
-            />
-            <span>/</span>
-            <input
-              className={styles.count}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              aria-label="Total questions"
-              value={questions}
-              onChange={(event) => setQuestions(event.target.value)}
-              onBlur={() => void commitScore()}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.currentTarget.blur()
-                }
-              }}
-            />
-          </div>
-        </div>
+    <div className={styles.reviewRow}>
+      <label className={styles.check}>
+        <input
+          type="checkbox"
+          checked={Boolean(range?.reviewedAt)}
+          onChange={(event) => void saveDayReview(item, date, { reviewed: event.target.checked })}
+        />
+        Checked
+      </label>
+      <div className={styles.score}>
+        <span>Score</span>
+        <input
+          className={styles.count}
+          inputMode="numeric"
+          pattern="[0-9]*"
+          aria-label="Correct answers"
+          value={correct}
+          onChange={(event) => setCorrect(event.target.value)}
+          onBlur={() => void commitScore()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+        <span>/</span>
+        <input
+          className={styles.count}
+          inputMode="numeric"
+          pattern="[0-9]*"
+          aria-label="Total questions"
+          value={questions}
+          onChange={(event) => setQuestions(event.target.value)}
+          onBlur={() => void commitScore()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
       </div>
-    </li>
+    </div>
   )
 }
 
@@ -291,31 +311,4 @@ function parseCountInput(value: string): number | null {
   const count = Number(trimmed)
   if (!Number.isFinite(count)) return null
   return count
-}
-
-function uniqueStudents(items: DocumentSummary[], students: Student[]): Student[] {
-  const seen = new Set<string>()
-  const result: Student[] = []
-  for (const item of items) {
-    if (seen.has(item.studentId)) continue
-    const student = students.find((entry) => entry.id === item.studentId)
-    if (!student) continue
-    seen.add(item.studentId)
-    result.push(student)
-  }
-  return result
-}
-
-function dayLabel(
-  date: string,
-  owners: Student[],
-  count: number,
-  isToday: boolean,
-  review: 'none' | 'some' | 'all'
-): string {
-  const who = owners.length ? owners.map((item) => item.name).join(', ') : 'no worksheets'
-  const work = count === 0 ? who : `${count} worksheet${count === 1 ? '' : 's'} for ${who}`
-  const checked =
-    review === 'all' ? ' All work checked.' : review === 'some' ? ' Some work checked.' : ''
-  return `${isToday ? 'Today, ' : ''}${formatDate(date)}. ${work}.${checked}`
 }

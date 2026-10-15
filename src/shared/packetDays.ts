@@ -46,6 +46,31 @@ export function hasLessonOverview(overviewEndPage: number, pageCount: number): b
   return clampOverviewEnd(overviewEndPage, pageCount) > 0
 }
 
+export function lessonOverviewCount(item: {
+  overviewEndPage?: number
+  overviewPageCount?: number
+  pageCount?: number
+  pages?: { length: number }
+}): number {
+  const linked = item.overviewPageCount ?? 0
+  if (linked > 0) return Math.round(linked)
+  const pages = item.pageCount ?? item.pages?.length ?? 1
+  return clampOverviewEnd(item.overviewEndPage ?? 0, pages)
+}
+
+export function isPacketShell(item: { role?: string }): boolean {
+  return item.role === 'packet'
+}
+
+export function shouldMaterializePacket(
+  ranges: readonly { date: string }[],
+  overviewEndPage: number,
+  role?: string
+): boolean {
+  if (role === 'packet' || role === 'day') return false
+  return overviewEndPage > 0 || ranges.length > 1
+}
+
 export function isOverviewPage(page: number, overviewEndPage: number): boolean {
   return page >= 1 && page <= overviewEndPage
 }

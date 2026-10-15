@@ -65,16 +65,16 @@ export function RecentDocuments() {
   const filtered = useMemo(() => {
     const namesFor = (item: DocumentSummary) => {
       const owner = settings.students.find((entry) => entry.id === item.studentId)
-      const course = owner?.subjects.find((entry) => entry.id === item.subjectId)
-      return { student: owner?.name ?? '', subject: course?.name ?? '' }
+      const course = item.subjectName?.trim() || owner?.subjects.find((entry) => entry.id === item.subjectId)?.name
+      return { student: owner?.name ?? '', subject: course ?? '' }
     }
     return filterAndSortRecent(documents, filter, today, namesFor)
   }, [documents, filter, settings.students, today])
   const grouped = useMemo(() => groupRecentByDay(filtered), [filtered])
   const namesFor = (item: DocumentSummary) => {
     const owner = settings.students.find((entry) => entry.id === item.studentId)
-    const course = owner?.subjects.find((entry) => entry.id === item.subjectId)
-    return { student: owner?.name ?? '', subject: course?.name ?? '' }
+    const course = item.subjectName?.trim() || owner?.subjects.find((entry) => entry.id === item.subjectId)?.name
+    return { student: owner?.name ?? '', subject: course ?? '' }
   }
   const groupByDay = filter.sort === 'day'
   const student = settings.students.find((item) => item.id === filter.studentId)

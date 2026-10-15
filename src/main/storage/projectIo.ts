@@ -14,7 +14,7 @@ export function annotationsFile(projectDir: string): string {
 
 export async function loadProjectFromDisk(
   projectDir: string,
-  options: { touchOpened?: boolean } = {}
+  options: { touchOpened?: boolean; fingerprint?: string } = {}
 ): Promise<DocumentProject> {
   const raw = await readTextIfExists(annotationsFile(projectDir))
   if (!raw) {
@@ -30,10 +30,14 @@ export async function loadProjectFromDisk(
   if (!project) {
     throw new AppError(`The saved notes file is not a valid ${APP_NAME} document.`, ERROR_CODES.VALIDATION)
   }
-  try {
-    project.fingerprint = await fileFingerprint(annotationsFile(projectDir))
-  } catch {
-    project.fingerprint = fingerprintFromFile(Date.now(), raw.length)
+  if (options.fingerprint) {
+    project.fingerprint = options.fingerprint
+  } else {
+    try {
+      project.fingerprint = await fileFingerprint(annotationsFile(projectDir))
+    } catch {
+      project.fingerprint = fingerprintFromFile(Date.now(), raw.length)
+    }
   }
   project.projectDir = projectDir
   if (options.touchOpened !== false) {

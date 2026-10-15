@@ -4,7 +4,6 @@ import type { PageSample } from '../../services/adaptiveText'
 import { AdaptiveText } from './AdaptiveText'
 import {
   DEFAULT_HIGHLIGHT_WIDTH_PT,
-  DEFAULT_PENCIL_WIDTH_PT,
   DEFAULT_SHAPE_WIDTH_PT,
   DEFAULT_TEXT_SIZE_PT,
   HIGHLIGHT_OPACITY,
@@ -111,6 +110,7 @@ export function AnnotationLayer({
   const applyModify = useDocumentStore((state) => state.applyModify)
   const setSelected = useDocumentStore((state) => state.setSelected)
   const toolColors = useAppStore((state) => state.toolColors)
+  const pencilWidthPt = useAppStore((state) => state.pencilWidthPt)
 
   const hostRef = useRef<HTMLDivElement>(null)
   const [livePoints, setLivePoints] = useState<Point[]>([])
@@ -145,7 +145,7 @@ export function AnnotationLayer({
 
   const commitStroke = (type: 'stroke' | 'highlight', points: Point[]) => {
     if (points.length < 2) return
-    const simplified = simplifyStroke(points).map((point) => ({
+    const committed = (type === 'highlight' ? simplifyStroke(points) : points).map((point) => ({
       ...point,
       x: Math.min(1, Math.max(0, point.x)),
       y: Math.min(1, Math.max(0, point.y))
@@ -158,10 +158,10 @@ export function AnnotationLayer({
       updatedAt: nowIso(),
       style: {
         color: type === 'highlight' ? toolColors.highlighter : toolColors.pencil,
-        width: type === 'highlight' ? DEFAULT_HIGHLIGHT_WIDTH_PT : DEFAULT_PENCIL_WIDTH_PT,
+        width: type === 'highlight' ? DEFAULT_HIGHLIGHT_WIDTH_PT : pencilWidthPt,
         opacity: type === 'highlight' ? HIGHLIGHT_OPACITY : 1
       },
-      points: simplified
+      points: committed
     })
   }
 
@@ -526,7 +526,7 @@ export function AnnotationLayer({
               stroke={tool === 'highlighter' ? toolColors.highlighter : toolColors.pencil}
               opacity={tool === 'highlighter' ? HIGHLIGHT_OPACITY : 1}
               strokeWidth={pdfLengthToScreen(
-                tool === 'highlighter' ? DEFAULT_HIGHLIGHT_WIDTH_PT : DEFAULT_PENCIL_WIDTH_PT,
+                tool === 'highlighter' ? DEFAULT_HIGHLIGHT_WIDTH_PT : pencilWidthPt,
                 pageSize,
                 rendered
               )}

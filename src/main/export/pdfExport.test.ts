@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { inflateRawSync, inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -48,6 +49,24 @@ function project(dir: string, sourcePdfPath: string, extra?: Partial<DocumentPro
     fingerprint: '0',
     ...extra
   }
+}
+
+function decodedPdf(bytes: Buffer): string {
+  const raw = bytes.toString('latin1')
+  const parts = [raw]
+  const blocks = raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)
+  for (const block of blocks) {
+    const payload = Buffer.from(block[1], 'latin1')
+    for (const decode of [inflateSync, inflateRawSync]) {
+      try {
+        parts.push(decode(payload).toString('latin1'))
+        break
+      } catch {
+        /* try the next decoder */
+      }
+    }
+  }
+  return parts.join('\n')
 }
 
 describe('PDF export coordinates', () => {
@@ -106,6 +125,44 @@ describe('PDF export', () => {
     expect(bottom.y).toBeGreaterThan(0)
     expect(topLeft.y).toBeGreaterThan(bottom.y)
     expect(topLeft.x).toBeLessThan(bottom.x)
+  })
+
+  it('puts pencil strokes on the page instead of flipping them off it', async () => {
+    const dir = path.join(tmpdir(), `pagesprig-stroke-${Date.now()}`)
+    await mkdir(dir, { recursive: true })
+    const originalPath = path.join(dir, ORIGINAL_PDF_FILE)
+    const source = await PDFDocument.create()
+    source.addPage([612, 792])
+    await writeFile(originalPath, await source.save())
+    const createdAt = nowIso()
+    const exportedPath = await exportAnnotatedPdf(
+      project(dir, originalPath, {
+        annotations: emptyPageAnnotations(1).map((page) => ({
+          ...page,
+          annotations: [
+            {
+              id: 'stroke-1',
+              type: 'stroke',
+              page: 1,
+              createdAt,
+              updatedAt: createdAt,
+              style: { color: '#1A1612', width: 1.6, opacity: 1 },
+              points: [
+                { x: 0.25, y: 0.25 },
+                { x: 0.5, y: 0.25 },
+                { x: 0.5, y: 0.4 }
+              ]
+            }
+          ]
+        }))
+      })
+    )
+    const exported = await readFile(exportedPath)
+    const body = decodedPdf(exported)
+    expect(body).toContain('1 0 0 1 0 792 cm')
+    expect(body).toContain('1 0 0 -1 0 0 cm')
+    expect(body).toContain('153 198 m')
+    expect(body).not.toContain('153 594 m')
   })
 
   it('exports check marks and x marks onto the finished PDF', async () => {

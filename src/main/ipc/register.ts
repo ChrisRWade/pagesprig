@@ -1,15 +1,17 @@
 import { dialog, ipcMain, shell } from 'electron'
 import { APP_NAME, APP_VERSION, ERROR_CODES } from '@shared/constants'
 import { IPC_CHANNELS } from '@shared/ipc'
-import type { AddNotePageRequest, ExportRequest, ImportRequest, RemoveNotePageRequest, SaveProjectRequest } from '@shared/ipc'
+import type { AddNotePageRequest, ExportRequest, ImportRequest, RemoveNotePageRequest, SaveProjectRequest, SplitPacketRequest } from '@shared/ipc'
 import type { AppSettings, DocumentProject, SessionState } from '@shared/types'
 import { AppError, err, fromFilesystemError, ok } from '../storage/errors'
 import {
   addNotePage,
+  commitPacketSplit,
   deleteProject,
   exportProjectPdf,
   importPdfFiles,
   listDocuments,
+  listStudentFolders,
   loadLatestCheckpoint,
   loadProjectFromDisk,
   readPdfBytes,
@@ -229,6 +231,27 @@ export function registerIpc(): void {
     } catch (error) {
       if (error instanceof AppError) return err(error.message, error.code)
       return fromFilesystemError(error, 'Could not remove that worksheet.')
+    }
+  })
+
+  ipcMain.handle(
+    IPC_CHANNELS.listStudentFolders,
+    wrap(async () => {
+      const settings = await loadSettings()
+      if (!settings.storageRoot) return []
+      return listStudentFolders(settings.storageRoot)
+    })
+  )
+
+  ipcMain.handle(IPC_CHANNELS.splitPacket, async (_event, request: SplitPacketRequest) => {
+    try {
+      if (!request?.project || !Array.isArray(request.dayRanges)) {
+        return err('That packet could not be split.', ERROR_CODES.VALIDATION)
+      }
+      return ok(await commitPacketSplit(request.project, request.dayRanges, request.overviewEndPage ?? 0))
+    } catch (error) {
+      if (error instanceof AppError) return err(error.message, error.code)
+      return fromFilesystemError(error, 'Could not split that packet into school days.')
     }
   })
 
